@@ -1,0 +1,51 @@
+{
+  "name": "@rturnq/solid-router",
+  "version": "0.1.0",
+  "description": "A router for solid-js",
+  "author": "Ryan Turnquist",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rturnq/solid-router"
+  },
+  "source": "src",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc&&rollup -c",
+    "prebuild": "rimraf dist",
+    "dev": "rollup -c -w",
+    "test": ""
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@rollup/plugin-typescript": "^4.1.1",
+    "path-to-regexp": "^6.1.0"
+  },
+  "peerDependencies": {
+    "solid-js": "^0.17.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.9.0",
+    "@babel/plugin-proposal-nullish-coalescing-operator": "^7.8.3",
+    "@babel/plugin-proposal-optional-chaining": "^7.9.0",
+    "@babel/preset-typescript": "^7.9.0",
+    "@rollup/plugin-node-resolve": "^7.1.1",
+    "ava": "^3.6.0",
+    "ava-ts": "^0.25.2",
+    "babel-plugin-jsx-dom-expressions": "^0.17.3",
+    "babel-preset-solid": "^0.17.0",
+    "prettier": "^2.0.4",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.6.0",
+    "rollup-plugin-babel": "^4.4.0",
+    "rollup-plugin-filesize": "^7.0.0",
+    "solid-js": "^0.17.2",
+    "ts-node": "^8.8.2",
+    "tslib": "^1.11.1",
+    "typescript": "^3.8.3"
+  }
+}
