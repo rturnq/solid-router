@@ -14,7 +14,7 @@ export interface Props {
 export default (props: Props) => {
   const router = createRouter(props.handler, props.basePath);
 
-  if (props.autoRedirect && !isBase(router.basePath, router.location().path)) {
+  if (props.autoRedirect && !isBase(router.basePath, router.location().pathName)) {
     console.log(`Auto-redirecting to ${router.basePath}`);
     router.replace(router.basePath);
   }

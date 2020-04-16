@@ -15,7 +15,7 @@ export function useMatch(path: string, end?: boolean, strict?: boolean) {
   const matchFn = createMemo(() =>
     createMatchTestFn(resolvePath(path), end, strict)
   );
-  return () => matchFn()(location().path);
+  return () => matchFn()(location().pathName);
 }
 
 export function createMatchRoute(
@@ -68,5 +68,5 @@ export function createRoute(
     end,
     strict
   );
-  return [route, () => match(location().path)];
+  return [route, () => match(location().pathName)];
 }

@@ -81,7 +81,7 @@ export function pathToLocation(path: string): Loc {
 }
 
 export function pathNameToLocation(pathName: string, queryString: string = ''): Loc {
-  const path = queryString ? `${pathName}?${queryString}` : pathName;
+  const path = queryString ? `${pathName}?${queryString.replace(/^\?+/, '')}` : pathName;
   return {
     path,
     pathName,
