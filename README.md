@@ -15,7 +15,7 @@ A router for [solid-js](https://github.com/ryansolid/solid)
 Wrap the root of you application with the provider element
 
 ```tsx
-import { RouterProvider, browserPathRouting } from '@rturnq/solid-router`
+import { RouterProvider, browserPathRouting } from '@rturnq/solid-router';
 
 () => {
   return (
