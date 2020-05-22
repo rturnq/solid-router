@@ -5,7 +5,7 @@ import { ShowRoute } from './Route';
 
 export interface Props {
   handler: Routing;
-  children: JSX.Children;
+  children: JSX.Element;
   basePath?: string;
   autoRedirect?: boolean;
   transitionTimeoutMs?: number

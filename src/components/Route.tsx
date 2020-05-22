@@ -7,8 +7,8 @@ export interface Props {
   path?: string;
   end?: boolean;
   strict?: boolean;
-  render?: (params: RenderProps) => JSX.Children;
-  children?: JSX.Children;
+  render?: (params: RenderProps) => JSX.Element;
+  children?: JSX.Element;
 }
 
 export interface RenderProps {
