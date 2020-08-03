@@ -1,7 +1,12 @@
-import { createContext, createMemo, useContext } from 'solid-js';
+import { createContext, createMemo, useContext, createState } from 'solid-js';
 import { useRouter } from './routerContext';
 import { createMatchResultFn, createMatchTestFn, resolvePath } from './utils';
 import { Route, MatchTestFn, StringMap } from './types';
+
+interface State {
+  params: StringMap,
+  matchedPath: string
+}
 
 export const RouteContext = createContext<Route>();
 
@@ -25,30 +30,36 @@ export function createMatchRoute(
   end?: boolean,
   strict?: boolean
 ): [Route, MatchTestFn] {
-  let params: StringMap = {};
-  let matchedPath = '';
+  const [state, setState] = createState<State>({
+    params: {},
+    matchedPath: ''
+  });
+
+  const allParams = createMemo<StringMap>(() => ({
+    ...parentRoute?.getParams(),
+    ...state.params
+  }))
 
   const fullPath = resolvePath(basePath, parentRoute?.path, path);
   const matchFn = createMatchResultFn(fullPath, end, strict);
 
   const route: Route = {
     path: fullPath,
-    matchedPath: () => matchedPath,
-    getParams: <T extends StringMap = StringMap>() =>
-      ({
-        ...parentRoute?.getParams(),
-        ...params
-      } as T),
-    resolvePath: (path) => resolvePath(basePath, matchedPath, path)
+    matchedPath: () => state.matchedPath,
+    getParams: <T extends StringMap = StringMap>() => allParams() as T,
+    resolvePath: (path) => resolvePath(basePath, state.matchedPath, path)
   };
 
   const match = (path: string) => {
     const result = matchFn(path);
     if (result) {
-      params = result.params;
-      matchedPath = result.path;
+      setState({
+        params: result.params,
+        matchedPath: result.path
+      });
+      return true;
     }
-    return !!result;
+    return false
   };
 
   return [route, match];
@@ -68,5 +79,7 @@ export function createRoute(
     end,
     strict
   );
-  return [route, () => match(location().pathName)];
+  const isMatch = () => match(location().pathName);
+
+  return [route, isMatch];
 }

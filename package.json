@@ -69,7 +69,10 @@
         "tsx"
       ],
       "testOptions": {
-        "presets": ["@babel/preset-typescript", "solid"],
+        "presets": [
+          "@babel/preset-typescript",
+          "solid"
+        ],
         "plugins": [
           "@babel/plugin-proposal-optional-chaining",
           "@babel/plugin-proposal-nullish-coalescing-operator",
