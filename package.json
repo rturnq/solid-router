@@ -1,6 +1,6 @@
 {
   "name": "@rturnq/solid-router",
-  "version": "0.1.4-beta1",
+  "version": "0.1.4",
   "description": "A router for solid-js",
   "author": "Ryan Turnquist",
   "license": "MIT",
