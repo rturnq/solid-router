@@ -11,10 +11,10 @@ export function browserPathRouting(): Routing {
     },
     get,
     push: (next) => {
-      history.pushState(null, '', next.pathName);
+      window.history.pushState(null, '', next.path);
     },
     replace: (next) => {
-      history.replaceState(null, '', next.pathName);
+      window.history.replaceState(null, '', next.path);
     },
     origin:() => window.location.origin
   };
@@ -30,11 +30,11 @@ export function browserHashRouting(): Routing {
     },
     get,
     push: (next) => {
-      window.location.hash = next.pathName;
+      window.location.hash = next.path;
       return true;
     },
     replace: (next) => {
-      window.location.hash = next.pathName;
+      window.location.hash = next.path;
       return true;
     },
     origin: () => window.location.origin
