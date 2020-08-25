@@ -80,8 +80,9 @@ export function pathToLocation(path: string): Loc {
   };
 }
 
-export function pathNameToLocation(pathName: string, queryString: string = ''): Loc {
-  const path = queryString ? `${pathName}?${queryString.replace(/^\?+/, '')}` : pathName;
+export function pathNameToLocation(pathName: string, query: string = ''): Loc {
+  const queryString = query.replace(/^\?+/, '');
+  const path = queryString ? `${pathName}?${queryString}` : pathName;
   return {
     path,
     pathName,
