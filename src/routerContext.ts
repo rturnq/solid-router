@@ -19,7 +19,7 @@ export const useRouter = () => useContext(RouterContext);
 
 export function createRouter(handler: Routing, basePath: string = '/'): Router {
   const resolvePath = createPathResolver(basePath);
-  let query: StringMap = {};
+  const [query, setQuery] = createSignal<StringMap>({});
   const [location, setLocation] = createSignal(
     execMiddelware(handler.get()),
     (a, b) => a.path === b.path
@@ -42,7 +42,7 @@ export function createRouter(handler: Routing, basePath: string = '/'): Router {
   // });
 
   function execMiddelware(location: Loc) {
-    query = parseQueryString(location.queryString);
+    setQuery(parseQueryString(location.queryString));
 
     // RT:C: Could do other things here right before state update
 
@@ -71,7 +71,7 @@ export function createRouter(handler: Routing, basePath: string = '/'): Router {
   return {
     basePath: normalizePath(basePath),
     location,
-    query: <T extends StringMap = StringMap>() => query as T,
+    query: <T extends StringMap = StringMap>() => query() as T,
     push: (next: string, options?: Partial<RerouteOptions>) => {
       handleReroute(handler.push, next, options);
     },
