@@ -21,7 +21,10 @@ export function browserPathRouting(): Routing {
 }
 
 export function browserHashRouting(): Routing {
-  const get = () => pathNameToLocation(document.location.hash.slice(1) || '/', document.location.search);
+  const get = () => {
+    const [pathName, queryString] = document.location.hash.slice(1).split('?');
+    return pathNameToLocation(pathName || '/', queryString);
+  };
   return {
     listen: (set) => {
       const handleHashChange = () => set(get());
