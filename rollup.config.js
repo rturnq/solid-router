@@ -19,7 +19,7 @@ export default {
 		filesize()
   ],
   input: 'src/index.ts',
-  external: ['solid-js', 'solid-js/dom', 'path-to-regexp'],
+  external: ['solid-js', 'solid-js/web', 'history', 'regexparam'],
   output: [
     { file: pkg.main, format: 'cjs' },
     { file: pkg.module, format: 'es' }
