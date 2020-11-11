@@ -15,204 +15,298 @@ A router for [solid-js](https://github.com/ryansolid/solid)
 Wrap the root of you application with the provider element
 
 ```tsx
-import { RouterProvider, browserPathRouting } from '@rturnq/solid-router';
+import { Router, pathIntegration } from '@rturnq/solid-router';
 
-() => {
+function App() {
   return (
-    <RouterProvider handler={browserPathRouting()}>
-      <MyApp />
-    </RouterProvider>
-  )
+    <Router integration={pathIntegration()}>
+      <Root />
+    </Router>
+  );
 }
 ```
 
+Create some routes and links
+
+```tsx
+import { Swich } from 'solid-js';
+import { Link, MatchRoute } from '@rturnq/solid-router';
+
+function Root() {
+  return (
+    <>
+      <nav>
+        <Link href="/">Home</Link>
+        <Link href="/about">About</Link>
+        <Link href="/widgets/1234">Widget #1234</Link>
+      </nav>
+      <main>
+        <Switch fallback={<h1>404</h1>}>
+          <MatchRoute path="" end>
+            <IndexPage />
+          </MatchRoute>
+          <MatchRoute path="about">
+            <AboutPage />
+          </MatchRoute>
+          <MatchRoute path="widgets/:id">
+            {(route) => <WidgetPage id={route.params.id}/>}
+          </MatchRoute>
+        </Router>
+      </main>
+    </>
+  );
+}
+```
 
 ## API
 
-### useRouter
-Access the router context provided by the `<RouterProvider>` component.
+### `useRouter`
+Access the router context provided by the `<Router>` component.
 
 ```typescript
 useRouter(): Router
 
-interface Router {
-   // The path all subsequent paths will be resolved against (ie. a link to /foo/bar will be resolved to /basepath/foo/bar). This is path your application is served from
-  basePath: string;
+interface RouterState {
+   // top level route
+  base: Route;
 
-  // Signal contain the current location
-  location: () => Loc;
+  // state containing the current path and query string
+  location: { path: string, queryString: string};
 
-  // Signal containing the current query string (naivly) parsed into a map
-  query: <T extends { [key: string]: string }>() => T;
+  // state containing the current query string parsed to a map
+  query: Record<string, string>;
   
   // change current location to the new path and maintain history
-  push: (path: string, options?: Partial<RerouteOptions>) => void;
+  push: (path: string) => void;
 
   // replace current location to the new path
-  replace: (path: string, options?: Partial<RerouteOptions>) => void;
+  replace: (path: string) => void;
 
   // signal containing the current transition state
   isRouting: () => boolean;
 }
-
-interface Loc {
-  // Path including query string
-  path: string;
-
-  // Path not including query
-  pathName: string;
-
-  // Query string
-  queryString: string;
-}
-
-interface RerouteOptions {
-  // Use solid transition while changing route
-  transition: Boolean = true;
-
-  // Resolve the path to the router base path
-  resolvePath: Boolean = false;
-}
 ```
 
 
-### useRoute
- Access the the route context provided by the closest `<ShowRoute>` or `<MatchRoute>` component.
+### `useRoute`
+ Access the the route context provided by the closest `<Route>` component.
 
 ```typescript
 useRoute(): Route
 
-interface Route {
-  // Path defined by the route. Relative paths will be resolved against the next closest path or router base path
+interface RouteState {
+  // path definition for the route - relative paths defintions (not starting with a `/`) will be resolved against the next closest path or router base path
   path: string;
 
-  // Signal containing the current matched path for the route
-  matchedPath: () => string;
+  // signal containing the current matched path for the route
+  isMatch: () => bool;
 
-  // A function that returns a map containing any path paramaters for all routes within the route heirarchy
-  getParams: <T extends { [key: string]: string }>() => T;
+  // state containing any path paramaters for the full route
+  params: Record<string, string>
 
-  // A function that resolves relative paths again the route's 
-  resolvePath: (path: string) => string;
+  // function that resolves relative paths again the route's path - will return undefined if the path passed in contains a scheme (eg. http://, https://, //)
+  resolvePath: (path: string) => string | undefined;
 }
 ```
-
-### Routing
-
-The Routing interface provides the connection between the router and the browser or other integration. The following integrations are shipped with the library.
-
-```typescript
-interface Routing {
-  listen: (set: (value: Loc) => void) => () => void;
-  get: () => Loc;
-  push: (next: Loc) => true | void;
-  replace: (next: Loc) => true | void;
-  origin: () => string
-}
-```
-
-**browserPathRouting** - Integration with the browser using the path 
-
-**browserHashRouting** - Integration with the browser using the location hash
-
-**memoryRouting** - Simple memory integration using an array
-
 
 ## Components
 
-### \<RouterProvider>
+### `<Router>`
 Wraps your applcation with the router context and integrates with the routing system of your choice.
 ```typescript
-interface Props {
-  // Routing integration
-  handler: Routing;
+interface RouterProps {
+  // Routing integration. If not provided, the router will still work but not be connected to anything external.
+  integration?: [() => T, (value: T) => void];
 
   // Base path provided to the Router context
-  basePath?: string = '/';
+  basePath?: string;
 
-  // Redirect immediately to the base path if the current location is outside of the base path
-  autoRedirect?: boolean = false;
-
-  // Value used for the useTransition timeout for routing suspense
-  transitionTimeoutMs?: number = 300;
+  // Override any of the utils used by the router
+  utils?: Partial<Utils>;
 
   // Children
-  children?: JSX.Children;
+  children: JSX.Children;
 }
 ```
-
-### \<MatchRoute>
-Similar to solid's `<Match>`, should be used within a `<Switch>` component. The first to mac th the current location will display's its children. If the path provided is relative (ie. does not start with '/') it will be resolved against the parent route provided by any other `<MatchRoute>` or `<ShowRoute>`. If it does start with a '/' it will be resolved agains the router base path.
+### `<Route>`
+Provides both control flow based on the path definition and the router's current location as well as access for descendants to path parameters and a base to resolve relative paths against. Routes build up a tree where each route's path is joined with its parent's path and path parameters. When defining your routes make sure you define the path relative to the parent.
 
 ```typescript
-interface Props {
-  // Path to match - An empty string or undefined will resolve to the parent route context's path or router base path meaning it will always be matched
+interface RouteProps {
+  // Path definition to match - An empty string or undefined will resolve to the parent route's path meaning it will always be matched unles modified with the `end` property.
   path?: string;
 
-  // End option passed to path-to-regexp - controls wether the path must match to the end
+  // Controls if the path will match additional path segments after the what is provided by the `path` property. Useful for index content that should be displayed by default.
   end?: boolean = false;
 
-  // Strict option passed to path-to-regexp - determines if a trailing '/' is required
-  strict?: boolean = false;
+  // Component to handle control flow. Designed for Solid's <Show> and <Match> components but could use anything with a `when` property and children - defaults to <Show>.
+  component?: { when: bool, children: JSX.Children } = Show; 
 
-  // Render function pattern - if specified will be used instead of children
-  render?: (params: RenderProps) => JSX.Children;
-
-  // Children
-  children?: JSX.Children;
-}
-
-interface RenderProps {
-  // Current path parameters map
-  params: { [key: string]: string };
-
-  // Current query parameters map
-  query: { [key: string]: string };
-
-  // Current location
-  location: Loc;
+  // Children to render when the path defintion provided matches the router's current location. For convenience this can be a render function which will be passed the current route and the router are aruments. NOTE, the render function will only be called once while the route matches even if the location, parameters or query parameter change.
+  children: ((route: Route, router: Router) => JSX.Children) | JSX.Children;
 }
 ```
 
-### \<ShowRoute>
-Similar to Solid's `<Show>`, will display its children on a route match. Paths not starting with a '/' will be resolved against the parent route and those starting with a '/' will be resolved agains the router's base path
-
-_Same props as `<MatchRoute>`_
-
-### \<Link>
-Renders an anchor tag when clicked will update the router's location. Hrefs not starting with a '/' will be resolved against the parent route and those starting with a '/' will be resolved agains the router's base path.
-
-_Same props as `<a>`_
-
-### \<NavLink>
-A `<Link>` which will be assigned an active class when its href matches the current route.
+### `<MatchRoute>`
+Wrapper for `<Route>` which uses Solid's `<Switch>` as the `component` property for control flow.
 
 ```typescript
-interface Props extends Link.Props {
-  // Option passed to path-to-regexp
+// Seee RouteProps for details
+interface MatchRouteProps {
+  path?: string;
   end?: boolean = false;
-  
-  // Option passed to path-to-regexp
-  strict?: boolean = false;
+  children: ((route: Route, router: Router) => JSX.Children) | JSX.Children;
+}
+```
 
+### `<Link>`
+Renders an anchor tag when clicked will update the router's location. Relative hrefs not starting with a '/' will be resolved against the parent route and those starting with a '/' will be resolved against the router's base path. Absolute hrefs with a scheme or authority (eg. http://, https://, \/\/) will act like a normal anchor tags and not interact with the router at all.
+
+```typescript
+interface LinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
+  // Require Links to have an href
+  href: string
+}
+```
+
+### `<NavLink>`
+A wrapper around `<Link>` which will be assigned an active class when its href matches the current route. Absolute hrefs will never match.
+
+```typescript
+interface NavLinkProps extends LinkProps {
   // Class to apply when the href matches the current route
   activeClass?: string = "is-active"
+
+  // Same as end property on Route components
+  end?: boolean = false;
 }
 ```
 
-### \<Redirect>
-Immediatly redirect to the provided path. The path will be resolved in the same way as `<Link>` hrefs.
+### `<Redirect>`
+Immediatly redirect to the provided path.
 
 ```typescript
-interface Props {
-  // Path to redirect to
-  to: string;
-
-  // When true, use push to change the route instead of replace and thus preserve the history of the redirect
-  push?: boolean = false;
+interface RedirectProps {
+  // Path to redirect to. Relative hrefs will be resolved in the same way as a Link component except absolute hrefs will throw an error.
+  href: string;
 }
 ```
+
+## Integration
+Integration between the router and external systems such as the browser is provided by a simple signal with the following type:
+
+```typescript
+interface RouteUpdate {
+  // string representing the current route in the integrated system - external changes this to this will update the router, and changes to this by the router should update the external system.
+  value: string,
+
+  // method the route was updated by the router - external changes to this are ignored but it will always be defined when the router causes an update
+  mode?: 'push' | 'replace'
+}
+```
+
+The library provides some pre-made integrations for common use cases
+
+### `pathIntegration`
+Integration with the browser path via `window.location`, `window.history` and `onpopstate` event
+```tsx
+import { Router, pathIntegration } from '@rturnq/solid-router';
+
+function App() {
+  return (
+    <Router integration={pathIntegration()}>
+      <MyApp />
+    </Router>
+  );
+}
+```
+
+### `hashIntegration`
+Integration with the browser hash via `window.location`, and `hashchange` event 
+```tsx
+import { Router, hashIntegration } from '@rturnq/solid-router';
+
+function App() {
+  return (
+    <Router integration={hashIntegration()}>
+      <MyApp />
+    </Router>
+  );
+}
+```
+
+### `historyIntegration`
+Integration for the [history](https://github.com/ReactTraining/history) package
+```tsx
+import { Router, hashIntegration } from '@rturnq/solid-router';
+import { createBrowserHistory } from 'history'
+
+function App() {
+  const history = createBrowserHistory();
+  return (
+    <Router integration={historyIntegration(history)}>
+      <MyApp />
+    </Router>
+  );
+}
+```
+
+### `createIntegration`
+Bring your own integration
+```typescript
+createIntegration(
+  // Function called to get the current route from the integrated system
+  get: () => string;
+
+  // Function called to update the current route in the integrated system
+  set: (value: string, mode: 'push' | 'replace') => void;
+
+  // Optional function called immediately to setup any events or tracking the integrated system. When the source value changes call the provided `notify` method either with the new value or with no value, in which case it will use the value returned from the `get` function. Optionally return a function to be called for disposal.
+  init?: (notify: (next?: string) => void) => (() => void) | undefined;
+)
+```
+
+## Don't Like How Something Works? 
+
+The router tries to provide sensible defaults but also allows a few places where you can override the behavior.
+
+### Integrations
+As discussed previously, integration with an external system like the browser is just a signal. This package provides several common options but you can easily customize this however you want.
+
+### Overrides
+There are several functions which can be overridden to change how the router handles routes and other things.
+```typescript
+interface RouterUtils {
+  // This utility takes two or three paths and resolves them into a single path. It serves a couple purposes
+  // 1. Normalize path strings (eg "base" --> "/base"; "" --> "/")
+  // 2. Combine relative paths (eg "/base" + "foo/bar/" --> "/base/foo/bar")
+  // 3. When called with the optional third parameter, determines if the `path` parameter is relative to `from` or `base`.
+  //    eg. given base = "/base" and from = "/base/foo" then
+  //      "/baz" --> "/base/baz"
+  //      "baz" --> "/base/foo/baz"
+  //
+  //    It should also ensure the resulting path starts with the base
+  //    eg. given base = "/base" and from = "/foo" then
+  //      "/baz" --> "/base/baz"
+  //      "baz" --> "/base/foo/baz"
+  resolvePath(base: string, path: string, from?: string): string;
+
+  // The factory takes the path defined on each <Route> and returns a matcher function which will return an object containing all route parameters when it matches the router's location or null when it does not. The default matcher uses regexparam (https://github.com/lukeed/regexparam) to create a route matching function. Overriding this along with `resolvePath`  will allow you to use any path format you would like.
+  createMatcher(pathDefinition: string, options: RouteOptions): RouteMatcher;
+
+  // Parse the location query string into a map of key/values. The default query string parser is extremely naive and simply splits on '&' for each key/value pair and then on '=' to get the key and value.
+  parseQuery(queryString: string): ParamsCollection;
+}
+```
+
+To override these utils, provide your own to the \<Router> component utils property:
+```tsx
+<Router utils={{ ...myUtils }}>
+```
+It should have the following signature
+
+
 
 ## TODO
 
-Figure out Solid's server side rendering, hydration and make that all work nicely.
+Write more tests

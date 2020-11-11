@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+      "noEmit": true,
+      "target": "esnext",
+      "moduleResolution": "node",
+      "strict": true,
+      "lib": ["es6", "dom", "es2016", "es2017"],
+      "jsx": "preserve"
+    },
+    "include": ["test"],
+    "exclude": ["node_modules"]
+  }

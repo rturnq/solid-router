@@ -1,102 +1,58 @@
-import { match } from 'path-to-regexp';
-import { MatchResultFn, MatchTestFn, StringMap, Loc } from './types';
+import regexparam from 'regexparam';
+import type { RouteOptions, ParamsCollection, RouteMatcher } from './types';
 
-export function isPathRelative(path: string) {
-  return !path.startsWith('/');
+const hasSchemeRegex = /^(?:[a-z0-9]+:)?\/\//i;
+const normalizeRegex = /^\/+|\/+$|\s+/;
+
+function normalize(path: string) {
+  const s = path.replace(normalizeRegex, '');
+  return s ? '/' + s : '';
 }
 
 export function resolvePath(
-  basePath: string,
-  prevPath?: string,
-  nextPath?: string
-): string {
-  if (!nextPath) {
-    return prevPath ?? basePath;
+  base: string,
+  path: string,
+  from?: string
+): string | undefined {
+  if (hasSchemeRegex.test(path)) {
+    return undefined;
   }
-  if (isPathRelative(nextPath)) {
-    return normalizePath(`${prevPath ?? basePath}/${nextPath}`);
+
+  const basePath = normalize(base);
+  const fromPath = from && normalize(from);
+  let result = '';
+  if (!fromPath || path.charAt(0) === '/') {
+    result = basePath;
+  } else if (!fromPath.toLowerCase().startsWith(basePath.toLowerCase())) {
+    result = basePath + fromPath;
+  } else {
+    result = fromPath;
   }
-  return normalizePath(`${basePath}/${nextPath}`);
+  return result + normalize(path) || '/';
 }
 
-export function normalizePath(path: string) {
-  return '/' + path.replace(/[\/\\]+/g, '/').replace(/^\/|\/$/g, '');
-}
-
-function splitPath(path: string) {
-  return path.split('/').filter((p) => !!p);
-}
-
-export function isBase(basePath: string, testPath: string) {
-  const basePathParts = splitPath(basePath.toLowerCase());
-  const testPathParts = splitPath(testPath.toLowerCase());
-  return basePathParts.every((p, i) => p === testPathParts[i]);
-}
-
-export function createMatchResultFn(
-  path?: string,
-  end: boolean = false,
-  strict: boolean = false
-): MatchResultFn {
-  if (!path) {
-    return () => ({
-      params: {},
-      path: ''
-    });
-  }
-  const [pathName] = path.split('?');
-  const fn = match(pathName, { end, strict });
-  return (path) => fn(path) || undefined;
-}
-
-export function createMatchTestFn(
-  path?: string,
-  end: boolean = false,
-  strict: boolean = false
-): MatchTestFn {
-  if (!path) {
-    return () => true;
-  }
-  const fn = createMatchResultFn(path, end, strict);
-  return (path) => !!fn(path);
-}
-
-export function createPathResolver(basePath: string) {
-  return (path: string) => resolvePath(basePath, undefined, path);
-}
-
-export function createUriResolver(origin: string, basePath: string) {
-  const trimmedOrigin = origin.replace(/\/+$/, '');
-  return (path: string) =>
-    trimmedOrigin + resolvePath(basePath, undefined, path);
-}
-
-export function pathToLocation(path: string): Loc {
-  const [pathName, queryString = ''] = path.split('?');
-  return {
-    path,
-    pathName,
-    queryString
+export function createMatcher(
+  path: string,
+  options: RouteOptions
+): RouteMatcher {
+  const { keys, pattern } = regexparam(path, !options.end);
+  return (p) => {
+    const matches = pattern.exec(p);
+    return matches
+      ? keys.reduce((acc, _, i) => {
+          acc[keys[i]] = matches[i + 1];
+          return acc;
+        }, {} as ParamsCollection)
+      : null;
   };
 }
 
-export function pathNameToLocation(pathName: string, query: string = ''): Loc {
-  const queryString = query.replace(/^\?+/, '');
-  const path = queryString ? `${pathName}?${queryString}` : pathName;
-  return {
-    path,
-    pathName,
-    queryString
-  };
-}
-
-export function parseQueryString(queryString: string = '') {
-  const map: StringMap = {};
-  return queryString
-    ? queryString.split('&').reduce((acc, pair) => {
-        const [key, value] = pair.split('=');
-        acc[key] = value;
-        return acc;
-      }, map)
-    : map;
+export function parseQuery(queryString: string): ParamsCollection {
+  return queryString.split('&').reduce((acc, pair) => {
+    const [key, value] = pair.split('=', 2);
+    if (key) {
+      acc[key.toLowerCase()] = value;
+    }
+    return acc;
+  }, {} as ParamsCollection);
 }
