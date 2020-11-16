@@ -1,16 +1,18 @@
-import { Component, createMemo, splitProps } from 'solid-js';
+import { Component, createMemo, splitProps, untrack } from 'solid-js';
 import { Show, Match, assignProps } from 'solid-js/web';
 import {
   useRouter,
   createRouter,
-  createRouteScope,
+  createRoute,
   RouterContext,
-  useIsMatch
+  RouteContext,
+  useRoute
 } from './routing';
 import type {
   RouteUpdateSignal,
   RouterUtils,
-  RouteRenderFunction
+  RouteRenderFunction,
+  RouterState
 } from './types';
 
 type TargetEvent<T, E extends Event> = E & {
@@ -29,29 +31,35 @@ function callEventHandlerUnion<T, E extends Event>(
   }
 }
 
+interface LinkBaseProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
+  to: string | undefined;
+}
+
+function LinkBase(props: LinkBaseProps) {
+  const [, rest] = splitProps(props, ['to', 'href', 'onClick']);
+  const router = useRouter();
+
+  function handleClick(evt: TargetEvent<HTMLAnchorElement, MouseEvent>) {
+    callEventHandlerUnion(props.onClick, evt);
+    if (props.to !== undefined) {
+      evt.preventDefault();
+      router.push(props.to);
+    }
+  }
+
+  return <a {...rest} href={props.to ?? props.href} onClick={handleClick} />;
+}
+
 export interface LinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string;
 }
 
 export function Link(props: LinkProps) {
-  const [, rest] = splitProps(props, ['href', 'onClick']);
-  const router = useRouter();
-  const to = createMemo(
-    () => router.base.resolvePath(props.href),
-    undefined,
-    true
-  );
+  const [, rest] = splitProps(props, ['ref']);
+  const route = useRoute();
+  const to = createMemo(() => route.resolvePath(props.href));
 
-  function handleClick(evt: TargetEvent<HTMLAnchorElement, MouseEvent>) {
-    callEventHandlerUnion(props.onClick, evt);
-    const href = to();
-    if (href) {
-      evt.preventDefault();
-      router.push(href);
-    }
-  }
-
-  return <a {...rest} href={to() ?? props.href} onClick={handleClick} />;
+  return <LinkBase {...rest} to={to()} />;
 }
 
 export interface NavLinkProps extends LinkProps {
@@ -62,18 +70,37 @@ export interface NavLinkProps extends LinkProps {
 export function NavLink(props: NavLinkProps) {
   assignProps(props, { activeClass: 'is-active' });
   const [, rest] = splitProps(props, ['activeClass', 'end', 'ref']);
-  const isMatch = useIsMatch(props.href, props.end);
-  return <Link {...rest} classList={{ [props.activeClass!]: isMatch() }} />;
+  const router = useRouter();
+  const route = useRoute();
+  const to = createMemo(() => route.resolvePath(props.href));
+  const matcher = createMemo(() => {
+    const path = to();
+    return path !== undefined
+      ? router.utils.createMatcher(path, { end: !!props.end })
+      : undefined;
+  });
+  const isActive = createMemo(
+    () => {
+      const m = matcher();
+      return m && !!m(router.location.path);
+    },
+    false,
+    true
+  );
+
+  return <Link {...rest} classList={{ [props.activeClass!]: isActive() }} />;
 }
 
 export interface RedirectProps {
-  href: string;
+  href: ((router: RouterState) => string) | string;
 }
 
 export function Redirect(props: RedirectProps) {
   const router = useRouter();
-  const to = router.base.resolvePath(props.href);
-  if (!to) {
+  const href = props.href;
+  const path = typeof href === 'function' ? href(router) : href;
+  const to = router.base.resolvePath(path);
+  if (to === undefined) {
     throw new Error(`${to} is not a relative path`);
   }
   router.replace(to);
@@ -99,17 +126,20 @@ export interface RouteProps extends MatchRouteProps {
 
 export function Route(props: RouteProps) {
   const { path, end, component: Comp = Show } = props;
-  const [scope, { isMatch }] = createRouteScope(path, end);
+  const router = useRouter();
+  const route = createRoute(path, end);
+  const childDesc = Object.getOwnPropertyDescriptor(props, 'children')!.value;
+  const callFn = typeof childDesc === 'function' && childDesc.length;
 
   return (
-    <Comp when={isMatch()}>
-      {scope((route, router) => {
-        const children = props.children;
-        if (typeof children === 'function' && children.length) {
-          return children(route, router);
-        }
-        return children as JSX.Element;
-      })}
+    <Comp when={route.match() !== undefined}>
+      <RouteContext.Provider value={route}>
+        {callFn
+          ? untrack(() =>
+              (props.children as RouteRenderFunction)(route, router)
+            )
+          : (props.children as JSX.Element)}
+      </RouteContext.Provider>
     </Comp>
   );
 }

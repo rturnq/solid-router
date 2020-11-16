@@ -2,14 +2,14 @@ export interface RouteOptions {
   end: boolean;
 }
 
-export type ParamsCollection = Record<string, string>;
-
-export type RouteUpdateMode = 'push' | 'replace';
+export type RouteUpdateMode = "push" | "replace";
 
 export interface RouteUpdate {
   value: string;
   mode?: RouteUpdateMode;
 }
+
+export type RouteMatch = [string, Record<string, string>];
 
 export type RouteUpdateSignal = [
   () => RouteUpdate,
@@ -22,28 +22,32 @@ export interface RouterLocation {
 }
 
 export interface RouteMatcher {
-  (path: string): ParamsCollection | null;
+  (path: string): RouteMatch | null;
 }
 
 export interface RouterUtils {
   resolvePath(base: string, path: string, from?: string): string | undefined;
   createMatcher(pathDefinition: string, options: RouteOptions): RouteMatcher;
-  parseQuery(queryString: string): ParamsCollection;
+  parseQuery(queryString: string): Record<string, string>;
 }
 
 export interface RouteState {
   path: string;
-  isMatch: () => boolean;
-  params: ParamsCollection;
+  end: boolean;
+  match: () => string | undefined;
+  params: Record<string, string>;
   resolvePath(path: string): string | undefined;
 }
 
-export type RouteRenderFunction = (route: RouteState, router: RouterState) => JSX.Element;
+export type RouteRenderFunction = (
+  route: RouteState,
+  router: RouterState
+) => JSX.Element;
 
 export interface RouterState {
   base: RouteState;
   location: RouterLocation;
-  query: ParamsCollection;
+  query: Record<string, string>;
   isRouting: () => boolean;
   utils: RouterUtils;
   push(to: string): void;

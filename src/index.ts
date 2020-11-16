@@ -1,7 +1,6 @@
 export {
   createRouter,
-  createRouteScope,
-  useIsMatch,
+  createRoute,
   useRoute,
   useRouter
 } from './routing';
@@ -10,7 +9,6 @@ export * from './integration';
 export * from './utils';
 
 export type {
-  ParamsCollection,
   RouteMatcher,
   RouteOptions,
   RouteState,

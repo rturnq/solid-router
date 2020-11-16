@@ -1,12 +1,12 @@
-import regexparam from 'regexparam';
-import type { RouteOptions, ParamsCollection, RouteMatcher } from './types';
+import regexparam from "regexparam";
+import type { RouteOptions, RouteMatcher } from "./types";
 
 const hasSchemeRegex = /^(?:[a-z0-9]+:)?\/\//i;
 const normalizeRegex = /^\/+|\/+$|\s+/;
 
 function normalize(path: string) {
-  const s = path.replace(normalizeRegex, '');
-  return s ? '/' + s : '';
+  const s = path.replace(normalizeRegex, "");
+  return s ? "/" + s : "";
 }
 
 export function resolvePath(
@@ -20,15 +20,15 @@ export function resolvePath(
 
   const basePath = normalize(base);
   const fromPath = from && normalize(from);
-  let result = '';
-  if (!fromPath || path.charAt(0) === '/') {
+  let result = "";
+  if (!fromPath || path.charAt(0) === "/") {
     result = basePath;
-  } else if (!fromPath.toLowerCase().startsWith(basePath.toLowerCase())) {
+  } else if (fromPath.toLowerCase().indexOf(basePath.toLowerCase()) !== 0) {
     result = basePath + fromPath;
   } else {
     result = fromPath;
   }
-  return result + normalize(path) || '/';
+  return result + normalize(path) || "/";
 }
 
 export function createMatcher(
@@ -38,21 +38,23 @@ export function createMatcher(
   const { keys, pattern } = regexparam(path, !options.end);
   return (p) => {
     const matches = pattern.exec(p);
-    return matches
-      ? keys.reduce((acc, _, i) => {
-          acc[keys[i]] = matches[i + 1];
-          return acc;
-        }, {} as ParamsCollection)
-      : null;
+    if (!matches) {
+      return null;
+    }
+    const params = keys.reduce<Record<string, string>>((acc, _, i) => {
+      acc[keys[i]] = matches[i + 1];
+      return acc;
+    }, {});
+    return [matches[0] || '/', params];
   };
 }
 
-export function parseQuery(queryString: string): ParamsCollection {
-  return queryString.split('&').reduce((acc, pair) => {
-    const [key, value] = pair.split('=', 2);
+export function parseQuery(queryString: string): Record<string, string> {
+  return queryString.split("&").reduce<Record<string, string>>((acc, pair) => {
+    const [key, value] = pair.split("=", 2);
     if (key) {
       acc[key.toLowerCase()] = value;
     }
     return acc;
-  }, {} as ParamsCollection);
+  }, {});
 }

@@ -90,7 +90,7 @@ describe('parseQuery should', () => {
 
 describe('createMatcher should', () => {
   test('return empty object when location matches simple path', () => {
-    const expected = {};
+    const expected = ['/foo/bar', {}];
     const matcher = createMatcher('/foo/bar', { end: false });
     expect(matcher('/foo/bar')).toEqual(expected);
   });
@@ -102,13 +102,13 @@ describe('createMatcher should', () => {
   });
 
   test('return params collection when location matches parameterized path', () => {
-    const expected = { id: 'abc-123' };
+    const expected = ['/foo/abc-123', { id: 'abc-123' }];
     const matcher = createMatcher('/foo/:id', { end: false });
     expect(matcher('/foo/abc-123')).toEqual(expected);
   });
 
   test('match past end when end option is false', () => {
-    const expected = {};
+    const expected = ['/foo/bar', {}];
     const matcher = createMatcher('/foo/bar', { end: false });
     expect(matcher('/foo/bar/baz')).toEqual(expected);
   });
