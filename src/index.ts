@@ -1,7 +1,6 @@
 export {
   createRouter,
-  createRouteScope,
-  useMatch,
+  createRoute,
   useRoute,
   useRouter
 } from './routing';

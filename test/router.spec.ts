@@ -48,7 +48,7 @@ describe('Router should', () => {
 
     describe(`contain property 'path' which should`, () => {
       test(`be reactive to the path part of the integration signal`, () =>
-        new Promise((resolve) => {
+        new Promise<void>((resolve) => {
           createRoot(() => {
             const expected = 'fizz/buzz';
             const signal = createSignal<RouteUpdate>({
@@ -69,7 +69,7 @@ describe('Router should', () => {
         }));
 
       test(`ignore the queryString part of the integration signal`, () =>
-        new Promise((resolve) => {
+        new Promise<void>((resolve) => {
           createRoot(() => {
             const signal = createSignal<RouteUpdate>({
               value: '/foo/bar?hello=world'
@@ -97,7 +97,7 @@ describe('Router should', () => {
     });
     describe(`contain propery 'queryString' which should`, () => {
       test(`be reactive to the queryString part of the integration signal`, () =>
-        new Promise((resolve) => {
+        new Promise<void>((resolve) => {
           createRoot(() => {
             const expected = 'fizz=buzz';
             const signal = createSignal<RouteUpdate>({
@@ -118,7 +118,7 @@ describe('Router should', () => {
         }));
 
       test(`ignore the path part of the integration signal`, () =>
-        new Promise((resolve) => {
+        new Promise<void>((resolve) => {
           createRoot(() => {
             const signal = createSignal<RouteUpdate>({
               value: '/foo/bar?hello=world'
@@ -170,7 +170,7 @@ describe('Router should', () => {
     });
 
     test(`be reactive to location.queryString`, () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/foo/bar?hello=world'
@@ -190,7 +190,7 @@ describe('Router should', () => {
       }));
 
     test(`have fine-grain reactivity`, () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/foo/bar?hello=world'
@@ -236,7 +236,7 @@ describe('Router should', () => {
     });
 
     test(`do nothing if the new path is the same`, () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/foo/bar'
@@ -258,7 +258,7 @@ describe('Router should', () => {
       }));
 
     test(`update the integrationSignal`, () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/'
@@ -280,7 +280,7 @@ describe('Router should', () => {
       }));
 
     test(`be able to be called many times before it updates the integrationSignal`, () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/'
@@ -340,7 +340,7 @@ describe('Router should', () => {
     });
 
     test(`do nothing if the new path is the same`, () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/foo/bar'
@@ -362,7 +362,7 @@ describe('Router should', () => {
       }));
 
     test(`update the integrationSignal`, () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/'
@@ -384,7 +384,7 @@ describe('Router should', () => {
       }));
 
     test(`be able to be called many times before it updates the integrationSignal`, () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/'
@@ -427,7 +427,7 @@ describe('Router should', () => {
 
   describe('update the integration signal with the first update mode', () => {
     test(`when that is push`, () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/'
@@ -439,6 +439,8 @@ describe('Router should', () => {
               expect(n).toBe(1);
               expect(mode).toBe('push');
               resolve();
+            } else if (n > 0) {
+              throw new Error('Route integratio signal updated too soon');
             }
             return n + 1;
           }, 0);
@@ -452,7 +454,7 @@ describe('Router should', () => {
       }));
 
     test(`when that is replace`, () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/'
@@ -464,6 +466,8 @@ describe('Router should', () => {
               expect(n).toBe(1);
               expect(mode).toBe('replace');
               resolve();
+            } else if (n > 0) {
+              throw new Error('Route integratio signal updated too soon');
             }
             return n + 1;
           }, 0);
@@ -478,7 +482,7 @@ describe('Router should', () => {
   });
 
   describe('have member `isRouting` which should', () => {
-    test.skip('be true when the push or replace causes suspense', () => {
+    test.skip('be true when the push or replace causes transition', () => {
       throw new Error('Test not implemented');
     });
   });

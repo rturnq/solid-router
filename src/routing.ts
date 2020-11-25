@@ -3,14 +3,14 @@ import {
   createState,
   createComputed,
   useContext,
-  onCleanup,
   createMemo,
   createSignal,
   createRenderEffect,
   useTransition,
   untrack,
-  reconcile
+  reconcile,
 } from 'solid-js';
+import { isServer } from 'solid-js/web';
 import { createMatcher, parseQuery, resolvePath } from './utils';
 import type {
   RouteUpdateSignal,
@@ -22,14 +22,7 @@ import type {
   RouteMatch
 } from './types';
 
-const CurrentNode = Symbol('current-route-node');
-const RootNode = Symbol('root-route-node');
 const MAX_REDIRECTS = 100;
-
-interface RouterInernal extends RouterState {
-  [CurrentNode]: RouteNode;
-  [RootNode]: RouteNode;
-}
 
 interface Referrer {
   ref: string;
@@ -37,18 +30,10 @@ interface Referrer {
 }
 
 export const RouterContext = createContext<RouterState>();
+export const RouteContext = createContext<RouteState>();
+
 export const useRouter = () => useContext(RouterContext);
-export const useRoute = () => getRouteNode(useRouter() as RouterInernal).route;
-export const useMatch = (pattern: string, end: boolean = false) => {
-  const router = useRouter() as RouterInernal;
-  const { route } = getRouteNode(router);
-  const path = route.resolvePath(pattern);
-  if (!path) {
-    return () => false;
-  }
-  const matcher = router.utils.createMatcher(path, { end });
-  return createMemo(() => matcher(router.location.path)?.[0], undefined, true);
-};
+export const useRoute = () => useContext(RouteContext) || useRouter().base;
 
 export const defaultUtils = {
   resolvePath,
@@ -63,15 +48,14 @@ export function createRouter(
 ): RouterState {
   const utils = { ...defaultUtils, ...overrides };
   const path = utils.resolvePath('', basePath);
-  if (!path) {
+  if (path === undefined) {
     throw new Error(`${basePath} is not a valid base path`);
   }
 
-  const route = createRoute(utils, path, path, () => ([path, {}]));
-  const root = new RouteNode(undefined, route, false);
+  const route = createRouteState(utils, path, path, false, () => [path, {}]);
   const referrers: Referrer[] = [];
 
-  const [source, setSource] = integration ?? createSignal({ value: path });
+  const [source, setSource] = integration || createSignal({ value: path });
   const [isRouting, start] = useTransition();
   const [reference, setReference] = createSignal(source().value, true);
   const location = createStateMemo<RouterLocation>(() => {
@@ -99,27 +83,37 @@ export function createRouter(
     start(() => setReference(to));
   }
 
-  createComputed(() => {
-    setReference(source().value);
-  });
-
-  createRenderEffect(() => {
-    const nextRef = reference();
-    if (referrers.length) {
-      const { ref, mode } = referrers.shift()!;
-      if (nextRef !== ref) {
+  function handleRouteEnd(nextRef: string) {
+    const first = referrers.shift();
+    if (first) {
+      if (nextRef !== first.ref) {
         setSource({
           value: nextRef,
-          mode
+          mode: first.mode
         });
       }
       referrers.length = 0;
     }
+  }
+
+  createComputed(() => {
+    start(() => setReference(source().value));
   });
 
+  if (isServer) {
+    let notifyTimeout: any;
+    createComputed(() => {
+      const nextRef = reference();
+      clearTimeout(notifyTimeout);
+      notifyTimeout = setTimeout(() => handleRouteEnd(nextRef));
+    });
+  } else {
+    createRenderEffect(() => {
+      handleRouteEnd(reference());
+    });
+  }
+
   return {
-    [RootNode]: root,
-    [CurrentNode]: root,
     base: route,
     location,
     query,
@@ -131,121 +125,63 @@ export function createRouter(
     replace(to) {
       redirect('replace', to);
     }
-  } as RouterInernal;
-}
-
-function getRouteNode(router: RouterInernal) {
-  return router[CurrentNode] || new Error('No parent route');
-}
-
-export function createRouteScope(
-  pattern: string = '',
-  end: boolean = false
-): [(fn: (route: RouteState, router: RouterState) => JSX.Element) => JSX.Element, RouteState] {
-  const router = useRouter() as RouterInernal;
-  const parent = getRouteNode(router);
-  const path = router.utils.resolvePath(parent.route.path, pattern);
-  if (!path) {
-    throw new Error(`${pattern} is not a relative path`);
-  }
-  const node = createRouteNode(router, parent, path, end);
-
-  return [
-    (fn: (route: RouteState, router: RouterState) => any) => {
-      router[CurrentNode] = node;
-      return fn(node.route, router);
-    },
-    node.route
-  ];
-}
-
-export function createRouteNode(
-  router: RouterState,
-  parent: RouteNode,
-  path: string,
-  terminal: boolean
-): RouteNode {
-  if (path === parent.route.path && terminal === parent.terminal) {
-    ;//return parent;
-  } else if (parent.terminal) {
-    throw new Error(`Route '${path}' parent is a terminal route`);
-  }
-
-  const matcher = router.utils.createMatcher(path, { end: terminal });
-  const match = createMemo(() => matcher(router.location.path), null, true);
-  const route = createRoute(router.utils, router.base.path, path, match);
-  const node = parent.createChild(route, terminal);
-
-  onCleanup(() => {
-    node.dispose();
-  });
-
-  return node;
+  };
 }
 
 export function createRoute(
+  pattern: string = '',
+  end: boolean = false
+): RouteState {
+  const router = useRouter();
+  const parent = useRoute();
+  const path = router.utils.resolvePath(parent.path, pattern);
+  if (path === undefined) {
+    throw new Error(`${pattern} is not a valid path`);
+  }
+  if (parent.end) {
+    throw new Error(`Route '${path}' parent is a terminal route`);
+  }
+  const matcher = router.utils.createMatcher(path, { end });
+  const match = createMemo(() => matcher(router.location.path));
+  return createRouteState(router.utils, router.base.path, path, end, match);
+}
+
+export function createRouteState(
   utils: RouterUtils,
   basePath: string,
   path: string,
+  end: boolean,
   matchSignal: () => RouteMatch | null
 ): RouteState {
-  const match = createMemo(() => matchSignal()?.[0], undefined, true);
+  const match = createMemo(
+    () => {
+      const routeMatch = matchSignal();
+      return routeMatch ? routeMatch[0] : undefined;
+    },
+    undefined,
+    true
+  );
   return {
     path,
+    end,
     match,
-    params: createStateMemo(() => matchSignal()?.[1] ?? {}),
-    resolvePath(path) {
-      return utils.resolvePath(basePath, path, match());
+    params: createStateMemo(() => {
+      const routeMatch = matchSignal();
+      return routeMatch ? routeMatch[1] : {};
+    }),
+    resolvePath(path: string) {
+      const matchPath = match();
+      return matchPath !== undefined
+        ? utils.resolvePath(basePath, path, matchPath)
+        : undefined;
     }
   };
 }
 
-function createStateMemo<T extends {}>(fn: (state: T) => T) {
-  const [state, setState] = createState<T>({} as T);
+function createStateMemo<T extends {}>(fn: () => T) {
+  const [state, setState] = createState({} as T);
   createComputed(() => {
-    const prev = untrack(() => state) as T;
-    setState(reconcile(fn(prev), { key: null }));
+    setState(reconcile(fn(), { key: null }));
   });
   return state;
-}
-
-export class RouteNode {
-  private parent: RouteNode | undefined;
-  private readonly children: RouteNode[];
-  public readonly route: RouteState;
-  public readonly terminal: boolean;
-
-  constructor(parent: RouteNode | undefined, route: RouteState, terminal: boolean) {
-    this.parent = parent;
-    this.children = [];
-    this.route = route;
-    this.terminal = terminal;
-  }
-  private removeChild(node: RouteNode) {
-    if (!(node instanceof RouteNode)) {
-      throw new Error('child is not a RouteNode instance');
-    } else if (node.parent !== this) {
-      throw new Error(`child node's parent is not this node`);
-    }
-    const index = this.children.indexOf(node);
-    if (index < 0) {
-      throw new Error(`child node was not in this node's children collection`);
-    }
-    node.parent = undefined;
-    this.children.splice(index, 1);
-  }
-  createChild(route: RouteState, terminal: boolean) {
-    if (this.terminal) {
-      throw new Error('Route node is terminal');
-    }
-    const child = new RouteNode(this, route, terminal);
-    this.children.push(child);
-    return child;
-  }
-  dispose() {
-    for (const child of this.children) {
-      child.dispose();
-    }
-    this.parent?.removeChild(this);
-  }
 }

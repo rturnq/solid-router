@@ -23,7 +23,7 @@ export function resolvePath(
   let result = "";
   if (!fromPath || path.charAt(0) === "/") {
     result = basePath;
-  } else if (!fromPath.toLowerCase().startsWith(basePath.toLowerCase())) {
+  } else if (fromPath.toLowerCase().indexOf(basePath.toLowerCase()) !== 0) {
     result = basePath + fromPath;
   } else {
     result = fromPath;
@@ -45,7 +45,7 @@ export function createMatcher(
       acc[keys[i]] = matches[i + 1];
       return acc;
     }, {});
-    return [matches[0], params];
+    return [matches[0] || '/', params];
   };
 }
 

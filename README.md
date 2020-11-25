@@ -64,49 +64,65 @@ function Root() {
 Access the router context provided by the `<Router>` component.
 
 ```typescript
-useRouter(): Router
+useRouter(): RouterState
 
 interface RouterState {
-   // top level route
+   // Top level route
   base: Route;
 
-  // state containing the current path and query string
+  // Reactive state containing the current path and query string.
   location: { path: string, queryString: string};
 
-  // state containing the current query string parsed to a map
+  // Reactive state containing the current query string parsed to a map.
   query: Record<string, string>;
+
+  // Signal containing the current transition state.
+  isRouting: () => boolean;
   
-  // change current location to the new path and maintain history
+  // Change current location to the new path and maintain history.
   push: (path: string) => void;
 
-  // replace current location to the new path
+  // Replace current location to the new path.
   replace: (path: string) => void;
-
-  // signal containing the current transition state
-  isRouting: () => boolean;
 }
 ```
-
 
 ### `useRoute`
  Access the the route context provided by the closest `<Route>` component.
 
 ```typescript
-useRoute(): Route
+useRoute(): RouteState
 
 interface RouteState {
-  // path definition for the route - relative paths defintions (not starting with a `/`) will be resolved against the next closest path or router base path
+  // Path definition for the route. Relative paths defintions (not starting with a `/`) will be resolved against the next closest path or router base path.
   path: string;
 
-  // signal containing the current matched path for the route
-  isMatch: () => bool;
+  // Flag indicating if the route is terminal or matches 
+  end: boolean
 
-  // state containing any path paramaters for the full route
+  // Signal containing the route's matched portion of the current location or undefined if the route does not match.
+  match: () => string | undefined;
+
+  // Reactive state containing any path paramaters for the full route.
   params: Record<string, string>
 
-  // function that resolves relative paths again the route's path - will return undefined if the path passed in contains a scheme (eg. http://, https://, //)
+  // Resolves paths again the route's current matched path, the router's base or undefined if the route does not match the current location. Uses the resolvePath utility (see overrides) which by default will resolve paths starting with '/' to the router's base path, and undefined for paths which contains a scheme or authority (eg. http://, https://, //).
   resolvePath: (path: string) => string | undefined;
 }
+```
+
+### `useMatch`
+ Returns a matching 
+
+```typescript
+useMatch(): RouteMatch | null
+
+type RouteMatch = [
+  // The portion of the router's current location the given path pattern matched
+  string, 
+
+  Record<string, string>
+]
 ```
 
 ## Components
@@ -115,16 +131,16 @@ interface RouteState {
 Wraps your applcation with the router context and integrates with the routing system of your choice.
 ```typescript
 interface RouterProps {
-  // Routing integration. If not provided, the router will still work but not be connected to anything external.
+  // Routing integration to an external system like the browser. If not provided, the router will still work, but will only be controlled through its API and components.
   integration?: [() => T, (value: T) => void];
 
-  // Base path provided to the Router context
+  // Base path provided to the Router context. Generally this will be the path your application is served at.
   basePath?: string;
 
-  // Override any of the utils used by the router
+  // Override any of the utils used by the router to provide custom functionality.
   utils?: Partial<Utils>;
 
-  // Children
+  // Children, your app.
   children: JSX.Children;
 }
 ```
@@ -133,10 +149,10 @@ Provides both control flow based on the path definition and the router's current
 
 ```typescript
 interface RouteProps {
-  // Path definition to match - An empty string or undefined will resolve to the parent route's path meaning it will always be matched unles modified with the `end` property.
+  // Path definition to match. An empty string or undefined will resolve to the parent route's path meaning it will always be matched unles modified with the `end` property.
   path?: string;
 
-  // Controls if the path will match additional path segments after the what is provided by the `path` property. Useful for index content that should be displayed by default.
+  // Controls if the route will match additional path segments after the what is provided by the `path` property. Useful for index content that should be displayed by default.
   end?: boolean = false;
 
   // Component to handle control flow. Designed for Solid's <Show> and <Match> components but could use anything with a `when` property and children - defaults to <Show>.
