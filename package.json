@@ -1,32 +1,31 @@
 {
   "name": "@rturnq/solid-router",
-  "version": "0.2.0-beta01",
+  "version": "0.2.0-beta03",
   "description": "A router for solid-js",
   "author": "Ryan Turnquist",
   "license": "MIT",
+  "homepage": "https://github.com/rturnq/solid-router#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/rturnq/solid-router"
   },
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc&&rollup -c",
     "prebuild": "rimraf dist",
-    "dev": "rollup -c -w",
     "test": "jest && npm run test:types",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage && npm run test:types",
-    "test:types": "tsc --project tsconfig.test.json"
+    "test:types": "tsc --project tsconfig.test.json",
+    "prepublishOnly": "npm run build"
   },
   "files": [
     "dist"
   ],
   "dependencies": {
-    "history": "^5.0.0",
-    "regexparam": "^1.3.0",
-    "solid-js": "^0.22.7"
+    "regexparam": "^1.3.0"
   },
   "peerDependencies": {
     "solid-js": "^0.22.7",
@@ -34,20 +33,19 @@
   },
   "devDependencies": {
     "@babel/core": "^7.12.9",
-    "@babel/plugin-proposal-nullish-coalescing-operator": "^7.12.1",
-    "@babel/plugin-proposal-optional-chaining": "^7.12.7",
     "@babel/preset-env": "^7.12.7",
     "@babel/preset-typescript": "^7.12.7",
+    "@rollup/plugin-babel": "^5.2.1",
     "@rollup/plugin-node-resolve": "^10.0.0",
     "@types/jest": "^26.0.15",
     "babel-preset-solid": "^0.22.7",
-    "browser-env": "^3.3.0",
+    "history": "^5.0.0",
     "jest": "^26.6.3",
     "prettier": "^2.2.0",
     "rimraf": "^3.0.2",
     "rollup": "^2.33.3",
-    "rollup-plugin-babel": "^4.4.0",
     "rollup-plugin-filesize": "^9.0.0",
+    "solid-js": "^0.22.7",
     "tslib": "^2.0.3",
     "typescript": "^4.1.2"
   }
