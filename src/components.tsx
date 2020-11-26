@@ -47,7 +47,13 @@ function LinkBase(props: LinkBaseProps) {
     }
   }
 
-  return <a {...rest} href={props.to ?? props.href} onClick={handleClick} />;
+  return (
+    <a
+      {...rest}
+      href={props.to != null ? props.to : props.href}
+      onClick={handleClick}
+    />
+  );
 }
 
 export interface LinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
