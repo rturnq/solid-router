@@ -1,5 +1,5 @@
-import { Component, createMemo, splitProps, untrack } from 'solid-js';
-import { Show, Match, assignProps } from 'solid-js/web';
+import { Component, Show, Match, createMemo, splitProps, untrack } from 'solid-js';
+import { assignProps } from 'solid-js/web';
 import {
   useRouter,
   createRouter,
@@ -94,7 +94,13 @@ export function NavLink(props: NavLinkProps) {
     true
   );
 
-  return <Link {...rest} classList={{ [props.activeClass!]: isActive() }} />;
+  return (
+    <Link
+      {...rest}
+      classList={{ [props.activeClass!]: isActive() }}
+      aria-current={isActive() ? 'page' : undefined}
+    />
+  );
 }
 
 export interface RedirectProps {
