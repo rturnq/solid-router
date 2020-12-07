@@ -1,3 +1,5 @@
+import { JSX } from 'solid-js';
+
 export interface RouteOptions {
   end: boolean;
 }

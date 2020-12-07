@@ -2,3 +2,4 @@ node_modules
 dist
 coverage
 rturnq-solid-router-*.tgz
+.vscode/settings.json

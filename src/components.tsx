@@ -1,4 +1,4 @@
-import { Component, Show, Match, createMemo, splitProps, untrack } from 'solid-js';
+import { Component, Show, Match, createMemo, splitProps, untrack, JSX } from 'solid-js';
 import { assignProps } from 'solid-js/web';
 import {
   useRouter,
