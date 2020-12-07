@@ -134,11 +134,11 @@ export function createRoute(
 ): RouteState {
   const router = useRouter();
   const parent = useRoute();
-  const path = router.utils.resolvePath(parent.path, pattern);
+  const path = parent.resolvePath(pattern);
   if (path === undefined) {
     throw new Error(`${pattern} is not a valid path`);
   }
-  if (parent.end) {
+  if (parent.end && !end) {
     throw new Error(`Route '${path}' parent is a terminal route`);
   }
   const matcher = router.utils.createMatcher(path, { end });
