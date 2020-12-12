@@ -1,4 +1,12 @@
-import { Component, Show, Match, createMemo, splitProps, untrack, JSX } from 'solid-js';
+import {
+  Component,
+  Show,
+  Match,
+  createMemo,
+  splitProps,
+  untrack,
+  JSX
+} from 'solid-js';
 import { assignProps } from 'solid-js/web';
 import {
   useRouter,
@@ -12,7 +20,8 @@ import type {
   RouteUpdateSignal,
   RouterUtils,
   RouteRenderFunction,
-  RouterState
+  RouterState,
+  RouterIntegration
 } from './types';
 
 type TargetEvent<T, E extends Event> = E & {
@@ -38,22 +47,25 @@ interface LinkBaseProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
 function LinkBase(props: LinkBaseProps) {
   const [, rest] = splitProps(props, ['to', 'href', 'onClick']);
   const router = useRouter();
+  const href = createMemo(() =>
+    props.to !== undefined ? router.utils.renderPath(props.to) : props.href
+  );
 
   function handleClick(evt: TargetEvent<HTMLAnchorElement, MouseEvent>) {
     callEventHandlerUnion(props.onClick, evt);
-    if (props.to !== undefined) {
+    if (
+      props.to !== undefined &&
+      !evt.defaultPrevented &&
+      evt.button === 0 &&
+      (!props.target || props.target === '_self') &&
+      !(evt.metaKey || evt.altKey || evt.ctrlKey || evt.shiftKey)
+    ) {
       evt.preventDefault();
       router.push(props.to);
     }
   }
 
-  return (
-    <a
-      {...rest}
-      href={props.to != null ? props.to : props.href}
-      onClick={handleClick}
-    />
-  );
+  return <a {...rest} href={href()} onClick={handleClick} />;
 }
 
 export interface LinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -157,7 +169,7 @@ export function Route(props: RouteProps) {
 }
 
 export interface RouterProps {
-  integration?: RouteUpdateSignal;
+  integration?: RouterIntegration | RouteUpdateSignal;
   basePath?: string;
   utils?: Partial<RouterUtils>;
   children: JSX.Element;

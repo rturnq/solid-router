@@ -4,7 +4,7 @@ export interface RouteOptions {
   end: boolean;
 }
 
-export type RouteUpdateMode = "push" | "replace";
+export type RouteUpdateMode = "push" | "replace" | "init";
 
 export interface RouteUpdate {
   value: string;
@@ -12,6 +12,11 @@ export interface RouteUpdate {
 }
 
 export type RouteMatch = [string, Record<string, string>];
+
+export interface RouterIntegration {
+  signal: RouteUpdateSignal,
+  utils?: Partial<RouterUtils>
+}
 
 export type RouteUpdateSignal = [
   () => RouteUpdate,
@@ -31,6 +36,7 @@ export interface RouterUtils {
   resolvePath(base: string, path: string, from?: string): string | undefined;
   createMatcher(pathDefinition: string, options: RouteOptions): RouteMatcher;
   parseQuery(queryString: string): Record<string, string>;
+  renderPath(path: string): string;
 }
 
 export interface RouteState {

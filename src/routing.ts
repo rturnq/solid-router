@@ -8,10 +8,10 @@ import {
   createRenderEffect,
   useTransition,
   untrack,
-  reconcile,
+  reconcile
 } from 'solid-js';
 import { isServer } from 'solid-js/web';
-import { createMatcher, parseQuery, resolvePath } from './utils';
+import { createMatcher, parseQuery, resolvePath, renderPath } from './utils';
 import type {
   RouteUpdateSignal,
   RouteState,
@@ -19,7 +19,8 @@ import type {
   RouterLocation,
   RouteUpdateMode,
   RouterUtils,
-  RouteMatch
+  RouteMatch,
+  RouterIntegration
 } from './types';
 
 const MAX_REDIRECTS = 100;
@@ -38,24 +39,45 @@ export const useRoute = () => useContext(RouteContext) || useRouter().base;
 export const defaultUtils = {
   resolvePath,
   createMatcher,
-  parseQuery
+  parseQuery,
+  renderPath
 };
 
+function normalizeIntegration(
+  integration: RouterIntegration | RouteUpdateSignal | undefined
+): RouterIntegration {
+  if (!integration) {
+    return {
+      signal: createSignal({ value: '' })
+    };
+  } else if (Array.isArray(integration)) {
+    return {
+      signal: integration
+    };
+  }
+  return integration;
+}
+
 export function createRouter(
-  integration?: RouteUpdateSignal,
+  integration?: RouterIntegration | RouteUpdateSignal,
   basePath: string = '',
   overrides?: Partial<RouterUtils>
 ): RouterState {
-  const utils = { ...defaultUtils, ...overrides };
+  const {
+    signal: [source, setSource],
+    utils: intUtils
+  } = normalizeIntegration(integration);
+  const utils = { ...defaultUtils, ...intUtils, ...overrides };
   const path = utils.resolvePath('', basePath);
+
   if (path === undefined) {
     throw new Error(`${basePath} is not a valid base path`);
+  } else if (path && !source().value) {
+    setSource({ value: path, mode: 'init' });
   }
 
   const route = createRouteState(utils, path, path, false, () => [path, {}]);
   const referrers: Referrer[] = [];
-
-  const [source, setSource] = integration || createSignal({ value: path });
   const [isRouting, start] = useTransition();
   const [reference, setReference] = createSignal(source().value, true);
   const location = createStateMemo<RouterLocation>(() => {

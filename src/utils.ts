@@ -58,3 +58,7 @@ export function parseQuery(queryString: string): Record<string, string> {
     return acc;
   }, {});
 }
+
+export function renderPath(path: string): string {
+  return path;
+}
