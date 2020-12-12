@@ -1,5 +1,13 @@
-import { Component, Show, Match, createMemo, splitProps, untrack, JSX } from 'solid-js';
-import { assignProps } from 'solid-js/web';
+import {
+  Component,
+  Show,
+  Match,
+  createMemo,
+  splitProps,
+  untrack,
+  JSX
+} from 'solid-js';
+import { assignProps, isServer } from 'solid-js/web';
 import {
   useRouter,
   createRouter,
@@ -36,7 +44,7 @@ interface LinkBaseProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
 }
 
 function LinkBase(props: LinkBaseProps) {
-  const [, rest] = splitProps(props, ['to', 'href', 'onClick']);
+  const [, rest] = splitProps(props, ['children', 'to', 'href', 'onClick']);
   const router = useRouter();
 
   function handleClick(evt: TargetEvent<HTMLAnchorElement, MouseEvent>) {
@@ -52,7 +60,9 @@ function LinkBase(props: LinkBaseProps) {
       {...rest}
       href={props.to != null ? props.to : props.href}
       onClick={handleClick}
-    />
+    >
+      {props.children}
+    </a>
   );
 }
 
@@ -136,21 +146,36 @@ export interface RouteProps extends MatchRouteProps {
   }>;
 }
 
+function renderChildren(
+  props: { children: ((...args: any[]) => JSX.Element) | JSX.Element },
+  args: any[]
+) {
+  if (isServer) {
+    const children = props.children;
+    if (typeof children === 'function' && children.length) {
+      return children(...args);
+    }
+    return children;
+  } else {
+    const childDesc = Object.getOwnPropertyDescriptor(props, 'children')!.value;
+    if (typeof childDesc === 'function' && childDesc.length) {
+      return untrack(() =>
+        (props.children as (...args: any[]) => JSX.Element)(...args)
+      );
+    }
+    return props.children;
+  }
+}
+
 export function Route(props: RouteProps) {
   const { path, end, component: Comp = Show } = props;
   const router = useRouter();
   const route = createRoute(path, end);
-  const childDesc = Object.getOwnPropertyDescriptor(props, 'children')!.value;
-  const callFn = typeof childDesc === 'function' && childDesc.length;
 
   return (
     <Comp when={route.match() !== undefined}>
       <RouteContext.Provider value={route}>
-        {callFn
-          ? untrack(() =>
-              (props.children as RouteRenderFunction)(route, router)
-            )
-          : (props.children as JSX.Element)}
+        {renderChildren(props, [route, router])}
       </RouteContext.Provider>
     </Comp>
   );
