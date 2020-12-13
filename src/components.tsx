@@ -73,11 +73,11 @@ export interface LinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
 }
 
 export function Link(props: LinkProps) {
-  const [, rest] = splitProps(props, ['ref']);
   const route = useRoute();
   const to = createMemo(() => route.resolvePath(props.href));
 
-  return <LinkBase {...rest} to={to()} />;
+   // TODO: remove `any`, requires ref type fix
+  return <LinkBase {...props as any} to={to()} />;
 }
 
 export interface NavLinkProps extends LinkProps {
@@ -87,7 +87,7 @@ export interface NavLinkProps extends LinkProps {
 
 export function NavLink(props: NavLinkProps) {
   props = assignProps({}, { activeClass: 'is-active' }, props);
-  const [, rest] = splitProps(props, ['activeClass', 'end', 'ref']);
+  const [, rest] = splitProps(props, ['activeClass', 'end']);
   const router = useRouter();
   const route = useRoute();
   const to = createMemo(() => route.resolvePath(props.href));
@@ -108,7 +108,7 @@ export function NavLink(props: NavLinkProps) {
 
   return (
     <Link
-      {...rest}
+      {...rest as any} // TODO: remove `any`, requires ref type fix
       classList={{ [props.activeClass!]: isActive() }}
       aria-current={isActive() ? 'page' : undefined}
     />
