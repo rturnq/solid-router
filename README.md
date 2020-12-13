@@ -123,14 +123,16 @@ Wraps your applcation with the router context and integrates with the routing sy
 ```typescript
 interface RouterProps {
   // Routing integration to an external system like the browser. If not provided, the router will
-  // still work, but will only be controlled through its API and components.
-  integration?: [() => RouteUpdate, (value: RouteUpdate) => void];
+  // still work, but will only be controlled through its API and components. This can be a simple
+  // signal or a more customizable RouteIntegration.
+  integration?: RouteIntegration | [() => RouteUpdate, (value: RouteUpdate) => void];
 
   // Base path provided to the Router context. Generally this will be the path your application is
   // served at.
   basePath?: string;
 
-  // Override any of the utils used by the router to provide custom functionality.
+  // Override any of the utils used by the router to provide custom functionality. This will
+  // take precedence over any overrides defined in the integration.
   utils?: Partial<Utils>;
 
   // Children, your app.
@@ -210,7 +212,7 @@ interface RedirectProps {
 ```
 
 ## Integrations
-Integration between the router and external systems such as the browser is provided by a simple signal with the following type:
+Integration between the router and external systems such as the browser can be a simple signal with the following type:
 
 ```typescript
 interface RouteUpdate {
@@ -219,8 +221,19 @@ interface RouteUpdate {
   value: string,
 
   // method the route was updated by the router - external changes to this are ignored but it will
-  // always be defined when the router causes an update
-  mode?: 'push' | 'replace'
+  // always be defined when the router causes an update. The special value `init` will be used for
+  // a one-time update if the initial value of the signal is empty.
+  mode?: 'push' | 'replace' | 'init'
+}
+```
+
+If the integration needs to override the router's utils you can use the following form.
+
+```typescript
+interface RouterIntegration {
+  signal: [() => RouteUpdate, (value: RouteUpdate) => void],
+
+  utils?: Partial<RouterUtils>
 }
 ```
 
@@ -241,7 +254,7 @@ function App() {
 ```
 
 ### `hashIntegration`
-Integration with the browser hash via `window.location`, and `hashchange` event 
+Integration with the browser hash via `window.location`, and `hashchange` event. The router's `basePath` property will be used as a prefix to all hashes.
 ```tsx
 import { Router, hashIntegration } from '@rturnq/solid-router';
 
@@ -257,7 +270,7 @@ function App() {
 ### `historyIntegration`
 Integration for the [history](https://github.com/ReactTraining/history) package
 ```tsx
-import { Router, hashIntegration } from '@rturnq/solid-router';
+import { Router, historyIntegration } from '@rturnq/solid-router';
 import { createBrowserHistory } from 'history'
 
 function App() {
@@ -275,16 +288,21 @@ Bring your own integration
 ```typescript
 createIntegration(
   // Function called to get the current route from the integrated system
-  get: () => string;
+  get: () => string,
 
   // Function called to update the current route in the integrated system
-  set: (value: string, mode: 'push' | 'replace') => void;
+  set: (value: string, mode: 'push' | 'replace' | 'init') => void,
 
   // Optional function called immediately to setup any events or tracking the integrated system.
   // When the source value changes call the provided `notify` method either with the new value or
   // with no value, in which case it will use the value returned from the `get` function. Optionally
   // return a function to be called for disposal.
-  init?: (notify: (next?: string) => void) => (() => void) | undefined;
+  init?: (notify: (next?: string) => void) => (() => void) | undefined,
+
+  // Optionally override any of the utils used by the router to provide custom functionality for
+  // this integration. Note any utils defined on the Router component will take precedence over any
+  // defined here.
+  utils?: Partial<RouterUtils>
 )
 ```
 
@@ -326,6 +344,10 @@ interface RouterUtils {
   // extremely naive and simply splits on '&' for each key/value pair and then on '=' to get the key
   // and value.
   parseQuery(queryString: string): ParamsCollection;
+
+  // Determines how a path is rendered in the underlying anchor's href attribute for Link or NavLink
+  // component.
+  renderPath(path: stirng): string
 }
 ```
 

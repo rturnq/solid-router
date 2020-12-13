@@ -1,5 +1,10 @@
 import { createSignal, createComputed, onCleanup } from 'solid-js';
-import type { RouteUpdateMode, RouteUpdate, RouteUpdateSignal } from './types';
+import type {
+  RouteUpdateMode,
+  RouteUpdate,
+  RouterIntegration,
+  RouterUtils
+} from './types';
 import type { History } from 'history';
 
 function bindEvent(target: EventTarget, type: string, handler: EventListener) {
@@ -10,8 +15,9 @@ function bindEvent(target: EventTarget, type: string, handler: EventListener) {
 export function createIntegration(
   get: () => string,
   set: (value: string, mode: RouteUpdateMode) => void,
-  init?: (notify: (value?: string) => void) => () => void
-): RouteUpdateSignal {
+  init?: (notify: (value?: string) => void) => () => void,
+  utils?: Partial<RouterUtils>
+): RouterIntegration {
   const signal = createSignal<RouteUpdate>(
     { value: get() },
     (a, b) => a.value === b.value
@@ -27,17 +33,20 @@ export function createIntegration(
       })
     );
   }
-  return signal;
+  return {
+    signal,
+    utils
+  };
 }
 
 export function pathIntegration() {
   return createIntegration(
     () => window.location.pathname + window.location.search,
     (value, mode) => {
-      if (mode === 'replace') {
-        window.history.replaceState(null, '', value);
-      } else {
+      if (mode === 'push') {
         window.history.pushState(null, '', value);
+      } else {
+        window.history.replaceState(null, '', value);
       }
     },
     (notify) => bindEvent(window, 'popstate', () => notify())
@@ -50,7 +59,10 @@ export function hashIntegration() {
     (value) => {
       window.location.hash = value;
     },
-    (notify) => bindEvent(window, 'hashchange', () => notify())
+    (notify) => bindEvent(window, 'hashchange', () => notify()),
+    {
+      renderPath: (path) => `#${path}`
+    }
   );
 }
 
@@ -58,10 +70,10 @@ export function historyIntegration(history: History) {
   return createIntegration(
     () => history.location.pathname + history.location.search,
     (value, mode) => {
-      if (mode === 'replace') {
-        history.replace(value);
-      } else {
+      if (mode === 'push') {
         history.push(value);
+      } else {
+        history.replace(value);
       }
     },
     (notify) =>
@@ -69,6 +81,9 @@ export function historyIntegration(history: History) {
         if (evt.action === 'POP') {
           notify();
         }
-      })
+      }),
+    {
+      renderPath: history.createHref
+    }
   );
 }
