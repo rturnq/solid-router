@@ -86,7 +86,7 @@ export interface NavLinkProps extends LinkProps {
 }
 
 export function NavLink(props: NavLinkProps) {
-  assignProps(props, { activeClass: 'is-active' });
+  props = assignProps({}, { activeClass: 'is-active' }, props);
   const [, rest] = splitProps(props, ['activeClass', 'end', 'ref']);
   const router = useRouter();
   const route = useRoute();
