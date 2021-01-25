@@ -1,6 +1,7 @@
-import { createComputed, createRoot, createSignal, untrack } from 'solid-js';
+import { createEffect, createRoot, createSignal, unwrap } from 'solid-js';
 import { createRouter, defaultUtils } from '../src/routing';
 import type { RouteUpdate } from '../src/types';
+import { createCounter } from './helpers';
 
 describe('Router should', () => {
   describe('have member `base` which should', () => {
@@ -48,100 +49,57 @@ describe('Router should', () => {
 
     describe(`contain property 'path' which should`, () => {
       test(`be reactive to the path part of the integration signal`, () =>
-        new Promise<void>((resolve) => {
           createRoot(() => {
             const expected = 'fizz/buzz';
             const signal = createSignal<RouteUpdate>({
               value: '/foo/bar?hello=world'
             });
             const { location } = createRouter(signal);
-            createComputed((n = 0) => {
-              if (location.path === expected) {
-                expect(n).toBe(1);
-                resolve();
-              }
-              return n + 1;
-            }, 0);
-
             expect(location.path).toBe('/foo/bar');
             signal[1]({ value: expected + '?hello=world' });
-          });
+            expect(location.path).toBe(expected);
         }));
 
       test(`ignore the queryString part of the integration signal`, () =>
-        new Promise<void>((resolve) => {
           createRoot(() => {
             const signal = createSignal<RouteUpdate>({
               value: '/foo/bar?hello=world'
             });
             const { location } = createRouter(signal);
-            createComputed((n = 0) => {
-              location.path;
-              if (n > 0) {
-                throw new Error('path should not have reacted');
-              }
-              return n + 1;
-            }, 0);
-            createComputed((n = 0) => {
-              if (location.queryString === 'fizz=buzz') {
-                expect(n).toBe(1);
-                resolve();
-              }
-              return n + 1;
-            }, 0);
+            const count = createCounter(() => location.path);
 
             expect(location.path).toBe('/foo/bar');
             signal[1]({ value: '/foo/bar?fizz=buzz' });
-          });
+            expect(location.path).toBe('/foo/bar');
+            expect(count()).toBe(0);
         }));
     });
     describe(`contain propery 'queryString' which should`, () => {
       test(`be reactive to the queryString part of the integration signal`, () =>
-        new Promise<void>((resolve) => {
           createRoot(() => {
             const expected = 'fizz=buzz';
             const signal = createSignal<RouteUpdate>({
               value: '/foo/bar?hello=world'
             });
             const { location } = createRouter(signal);
-            createComputed((n = 0) => {
-              if (location.queryString === expected) {
-                expect(n).toBe(1);
-                resolve();
-              }
-              return n + 1;
-            }, 0);
 
             expect(location.queryString).toBe('hello=world');
             signal[1]({ value: '/foo/baz?' + expected });
-          });
+            expect(location.queryString).toBe(expected);
         }));
 
       test(`ignore the path part of the integration signal`, () =>
-        new Promise<void>((resolve) => {
           createRoot(() => {
             const signal = createSignal<RouteUpdate>({
               value: '/foo/bar?hello=world'
             });
             const { location } = createRouter(signal);
-            createComputed((n = 0) => {
-              location.queryString;
-              if (n > 0) {
-                throw new Error('path should not have reacted');
-              }
-              return n + 1;
-            }, 0);
-            createComputed((n = 0) => {
-              if (location.path === '/fizz/buzz') {
-                expect(n).toBe(1);
-                resolve();
-              }
-              return n + 1;
-            }, 0);
+            const count = createCounter(() => location.queryString);
 
             expect(location.queryString).toBe('hello=world');
             signal[1]({ value: '/fizz/buzz?hello=world' });
-          });
+            expect(location.queryString).toBe('hello=world');
+            expect(count()).toBe(0);
         }));
     });
   });
@@ -153,7 +111,7 @@ describe('Router should', () => {
           value: '/foo/bar?hello=world&fizz=buzz'
         });
         const { query } = createRouter(signal);
-        expect(query).toEqual({ hello: 'world', fizz: 'buzz' });
+        expect({ ...query }).toEqual({ hello: 'world', fizz: 'buzz' });
       });
     });
 
@@ -170,50 +128,29 @@ describe('Router should', () => {
     });
 
     test(`be reactive to location.queryString`, () =>
-      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/foo/bar?hello=world'
           });
           const { query } = createRouter(signal);
-          createComputed((n = 0) => {
-            if (query.fizz === 'buzz') {
-              expect(n).toBe(1);
-              resolve();
-            }
-            return n + 1;
-          }, 0);
 
-          expect(query).toEqual({ hello: 'world' });
+          expect({ ...query }).toEqual({ hello: 'world' });
           signal[1]({ value: '/foo/bar?hello=world&fizz=buzz' });
-        });
+          expect(query.fizz).toEqual('buzz');
       }));
 
     test(`have fine-grain reactivity`, () =>
-      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/foo/bar?hello=world'
           });
           const { query } = createRouter(signal);
-          createComputed((n = 0) => {
-            query.hello;
-            if (n > 0) {
-              throw new Error('query property should not have reacted');
-            }
-            return n + 1;
-          }, 0);
-          createComputed((n = 0) => {
-            if (query.fizz === 'buzz') {
-              expect(n).toBe(1);
-              resolve();
-            }
-            return n + 1;
-          }, 0);
+          const count = createCounter(() => query.hello);
 
-          expect(query).toEqual({ hello: 'world' });
+          expect(unwrap(query)).toEqual({ hello: 'world' });
           signal[1]({ value: '/foo/bar?hello=world&fizz=buzz' });
-        });
+          expect(query.fizz).toEqual('buzz');
+          expect(count()).toBe(0);
       }));
   });
 
@@ -236,25 +173,17 @@ describe('Router should', () => {
     });
 
     test(`do nothing if the new path is the same`, () =>
-      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/foo/bar'
           });
           const { location, push } = createRouter(signal);
-          createComputed((n = 0) => {
-            if (location.path !== '/foo/bar') {
-              expect(n).toBe(1);
-              resolve();
-            }
-            return n + 1;
-          }, 0);
+          const count = createCounter(() => location.path);
 
           expect(location.path).toBe('/foo/bar');
           push('/foo/bar');
           expect(location.path).toBe('/foo/bar');
-          push('/foo');
-        });
+          expect(count()).toBe(0)
       }));
 
     test(`update the integrationSignal`, () =>
@@ -264,7 +193,7 @@ describe('Router should', () => {
             value: '/'
           });
           const { push } = createRouter(signal);
-          createComputed((n = 0) => {
+          createEffect<number>((n = 0) => {
             const { value, mode } = signal[0]();
             if (value === '/foo/bar') {
               expect(n).toBe(1);
@@ -272,7 +201,7 @@ describe('Router should', () => {
               resolve();
             }
             return n + 1;
-          }, 0);
+          });
 
           expect(signal[0]().value).toBe('/');
           push('/foo/bar');
@@ -286,7 +215,7 @@ describe('Router should', () => {
             value: '/'
           });
           const { push } = createRouter(signal);
-          createComputed((n = 0) => {
+          createEffect<number>((n = 0) => {
             const { value, mode } = signal[0]();
             if (value === '/foo/5') {
               expect(n).toBe(1);
@@ -294,7 +223,7 @@ describe('Router should', () => {
               resolve();
             }
             return n + 1;
-          }, 0);
+          });
 
           expect(signal[0]()).toEqual({ value: '/' });
           push('/foo/1');
@@ -340,25 +269,17 @@ describe('Router should', () => {
     });
 
     test(`do nothing if the new path is the same`, () =>
-      new Promise<void>((resolve) => {
         createRoot(() => {
           const signal = createSignal<RouteUpdate>({
             value: '/foo/bar'
           });
           const { location, replace } = createRouter(signal);
-          createComputed((n = 0) => {
-            if (location.path !== '/foo/bar') {
-              expect(n).toBe(1);
-              resolve();
-            }
-            return n + 1;
-          }, 0);
+          const count = createCounter(() => location.path);
 
           expect(location.path).toBe('/foo/bar');
           replace('/foo/bar');
           expect(location.path).toBe('/foo/bar');
-          replace('/foo');
-        });
+          expect(count()).toBe(0);
       }));
 
     test(`update the integrationSignal`, () =>
@@ -368,7 +289,7 @@ describe('Router should', () => {
             value: '/'
           });
           const { replace } = createRouter(signal);
-          createComputed((n = 0) => {
+          createEffect<number>((n = 0) => {
             const { value, mode } = signal[0]();
             if (value === '/foo/bar') {
               expect(n).toBe(1);
@@ -376,7 +297,7 @@ describe('Router should', () => {
               resolve();
             }
             return n + 1;
-          }, 0);
+          });
 
           expect(signal[0]().value).toBe('/');
           replace('/foo/bar');
@@ -390,7 +311,7 @@ describe('Router should', () => {
             value: '/'
           });
           const { replace } = createRouter(signal);
-          createComputed((n = 0) => {
+          createEffect<number>((n = 0) => {
             const { value, mode } = signal[0]();
             if (value === '/foo/5') {
               expect(n).toBe(1);
@@ -398,7 +319,7 @@ describe('Router should', () => {
               resolve();
             }
             return n + 1;
-          }, 0);
+          });
 
           expect(signal[0]()).toEqual({ value: '/' });
           replace('/foo/1');
@@ -433,7 +354,7 @@ describe('Router should', () => {
             value: '/'
           });
           const { push, replace } = createRouter(signal);
-          createComputed((n = 0) => {
+          createEffect<number>((n = 0) => {
             const { value, mode } = signal[0]();
             if (value === '/foo/3') {
               expect(n).toBe(1);
@@ -443,7 +364,7 @@ describe('Router should', () => {
               throw new Error('Route integratio signal updated too soon');
             }
             return n + 1;
-          }, 0);
+          });
 
           expect(signal[0]().value).toBe('/');
           push('/foo/1');
@@ -460,7 +381,7 @@ describe('Router should', () => {
             value: '/'
           });
           const { push, replace } = createRouter(signal);
-          createComputed((n = 0) => {
+          createEffect<number>((n = 0) => {
             const { value, mode } = signal[0]();
             if (value === '/foo/3') {
               expect(n).toBe(1);
@@ -470,7 +391,7 @@ describe('Router should', () => {
               throw new Error('Route integratio signal updated too soon');
             }
             return n + 1;
-          }, 0);
+          });
 
           expect(signal[0]().value).toBe('/');
           replace('/foo/1');
