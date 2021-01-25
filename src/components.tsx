@@ -152,9 +152,9 @@ export interface RouteProps extends MatchRouteProps {
   }>;
 }
 
-function renderChildren(
-  props: { children: ((...args: any[]) => JSX.Element) | JSX.Element },
-  args: any[]
+function renderChildren<T extends any[]>(
+  props: { children: ((...args: [...T]) => JSX.Element) | JSX.Element },
+  args: [...T]
 ) {
   if (isServer) {
     const children = props.children;
