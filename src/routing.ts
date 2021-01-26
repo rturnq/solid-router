@@ -1,7 +1,6 @@
 import {
   createContext,
   createState,
-  createComputed,
   useContext,
   createMemo,
   createSignal,
@@ -10,7 +9,6 @@ import {
   untrack,
   reconcile
 } from 'solid-js';
-import { isServer } from 'solid-js/web';
 import { createMatcher, parseQuery, resolvePath, renderPath } from './utils';
 import type {
   RouteUpdateSignal,
@@ -80,16 +78,13 @@ export function createRouter(
   const referrers: Referrer[] = [];
   const [isRouting, start] = useTransition();
   const [reference, setReference] = createSignal(source().value, true);
-  const location = createStateMemo<RouterLocation>(() => {
-    const [path, queryString = ''] = reference().split('?', 2);
-    return {
-      path,
-      queryString
-    };
-  });
-  const query = createStateMemo<Record<string, string>>(() => {
-    const qs = location.queryString;
-    return qs ? utils.parseQuery(qs) : {};
+  const [location] = createState<RouterLocation>({
+    get path() {
+      return reference().split('?', 1)[0];
+    },
+    get queryString() {
+      return reference().split('?', 2)[1] || '';
+    }
   });
 
   function redirect(mode: RouteUpdateMode, to: string) {
@@ -118,27 +113,20 @@ export function createRouter(
     }
   }
 
-  createComputed(() => {
+  createRenderEffect(() => {
     start(() => setReference(source().value));
   });
 
-  if (isServer) {
-    let notifyTimeout: any;
-    createComputed(() => {
-      const nextRef = reference();
-      clearTimeout(notifyTimeout);
-      notifyTimeout = setTimeout(() => handleRouteEnd(nextRef));
-    });
-  } else {
-    createRenderEffect(() => {
-      handleRouteEnd(reference());
-    });
-  }
+  createRenderEffect(() => {
+    handleRouteEnd(reference());
+  });
 
   return {
     base: route,
     location,
-    query,
+    query: createMapMemo(() =>
+      location.queryString ? utils.parseQuery(location.queryString) : {}
+    ),
     isRouting,
     utils,
     push(to) {
@@ -187,7 +175,7 @@ export function createRouteState(
     path,
     end,
     match,
-    params: createStateMemo(() => {
+    params: createMapMemo(() => {
       const routeMatch = matchSignal();
       return routeMatch ? routeMatch[1] : {};
     }),
@@ -200,10 +188,32 @@ export function createRouteState(
   };
 }
 
-function createStateMemo<T extends {}>(fn: () => T) {
-  const [state, setState] = createState({} as T);
-  createComputed(() => {
-    setState(reconcile(fn(), { key: null }));
+function createMapMemo<T>(fn: () => Record<string, T>): Record<string, T> {
+  const map = createMemo(fn, undefined, true);
+  const data = createMemo(map, undefined, (a, b) => {
+    reconcile(b, { key: null })(a as any);
+    return true;
   });
-  return state;
+  const [state] = createState({
+    get map() {
+      return data();
+    }
+  });
+  return new Proxy(
+    {},
+    {
+      get(_, key) {
+        return untrack(() => state.map)[key as any];
+      },
+      ownKeys() {
+        return Reflect.ownKeys(map());
+      },
+      getOwnPropertyDescriptor() {
+        return {
+          enumerable: true,
+          configurable: true
+        };
+      }
+    }
+  );
 }

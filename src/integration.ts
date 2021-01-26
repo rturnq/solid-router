@@ -1,4 +1,4 @@
-import { createSignal, createComputed, onCleanup } from 'solid-js';
+import { createSignal, onCleanup } from 'solid-js';
 import type {
   RouteUpdateMode,
   RouteUpdate,
@@ -12,27 +12,41 @@ function bindEvent(target: EventTarget, type: string, handler: EventListener) {
   return () => target.removeEventListener(type, handler);
 }
 
+function intercept<T>(
+  signal: [() => T, (v: T) => void],
+  get?: (v: T) => T,
+  set?: (v: T) => T
+): [() => T, (v: T) => void] {
+  const [value, setValue] = signal;
+  return [
+    get ? () => get(value()) : value,
+    set ? (v: T) => setValue(set(v)) : setValue
+  ];
+}
+
 export function createIntegration(
   get: () => string,
   set: (value: string, mode: RouteUpdateMode) => void,
   init?: (notify: (value?: string) => void) => () => void,
   utils?: Partial<RouterUtils>
 ): RouterIntegration {
-  const signal = createSignal<RouteUpdate>(
-    { value: get() },
-    (a, b) => a.value === b.value
+  const signal = intercept<RouteUpdate>(
+    createSignal({ value: get() }, (a, b) => a.value === b.value),
+    undefined,
+    (next) => {
+      const { value, mode } = next;
+      mode && set(value, mode);
+      return next;
+    }
   );
-  createComputed(() => {
-    const { value, mode } = signal[0]();
-    mode && set(value, mode);
-  });
-  if (init) {
+
+  init &&
     onCleanup(
       init((value = get()) => {
         signal[1]({ value });
       })
     );
-  }
+
   return {
     signal,
     utils

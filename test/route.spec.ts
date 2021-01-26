@@ -102,23 +102,24 @@ describe('RouteState should', () => {
       }));
 
     test('not react to matchSignal changing the second tuple element', () =>
-        createRoot(() => {
-          const [matchSignal, setMatchSignal] = createSignal<RouteMatch | null>(
-            ['foo', {}]
-          );
-          const { match } = createRouteState(
-            defaultUtils,
-            '',
-            '',
-            false,
-            matchSignal
-          );
-          const count = createCounter(() => match());
+      createRoot(() => {
+        const [matchSignal, setMatchSignal] = createSignal<RouteMatch | null>([
+          'foo',
+          {}
+        ]);
+        const { match } = createRouteState(
+          defaultUtils,
+          '',
+          '',
+          false,
+          matchSignal
+        );
+        const count = createCounter(() => match());
 
-          expect(match()).toBe('foo');
-          setMatchSignal(['foo', { bar: 'baz' }]);
-          expect(match()).toBe('foo');
-          expect(count()).toBe(0);
+        expect(match()).toBe('foo');
+        setMatchSignal(['foo', { bar: 'baz' }]);
+        expect(match()).toBe('foo');
+        expect(count()).toBe(0);
       }));
   });
 
@@ -204,23 +205,23 @@ describe('RouteState should', () => {
       }));
 
     test('not react to matchSignal changing the first tuple element', () =>
-        createRoot(() => {
-          const match: RouteMatch = ['', { foo: new Date().toISOString() }];
-          const [matchSignal, setMatchSignal] = createSignal<RouteMatch | null>(
-            match
-          );
-          const { params } = createRouteState(
-            defaultUtils,
-            '',
-            '',
-            false,
-            matchSignal
-          );
-          const count = createCounter(() => params.foo);
-          expect(unwrap(params)).toEqual(match[1]);
-          setMatchSignal(['foo', match[1]]);
-          expect(params.foo).toEqual(match[1].foo);
-          expect(count()).toBe(0);
+      createRoot(() => {
+        const match: RouteMatch = ['', { foo: new Date().toISOString() }];
+        const [matchSignal, setMatchSignal] = createSignal<RouteMatch | null>(
+          match
+        );
+        const { params } = createRouteState(
+          defaultUtils,
+          '',
+          '',
+          false,
+          matchSignal
+        );
+        const count = createCounter(() => params.foo);
+        expect(unwrap(params)).toEqual(match[1]);
+        setMatchSignal(['foo', match[1]]);
+        expect(params.foo).toEqual(match[1].foo);
+        expect(count()).toBe(0);
       }));
 
     test('react to fine-grained changes in matchSignal', () =>
