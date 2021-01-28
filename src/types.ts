@@ -4,7 +4,7 @@ export interface RouteOptions {
   end: boolean;
 }
 
-export type RouteUpdateMode = "push" | "replace" | "init";
+export type RouteUpdateMode = 'push' | 'replace' | 'init';
 
 export interface RouteUpdate {
   value: string;
@@ -14,8 +14,8 @@ export interface RouteUpdate {
 export type RouteMatch = [string, Record<string, string>];
 
 export interface RouterIntegration {
-  signal: RouteUpdateSignal,
-  utils?: Partial<RouterUtils>
+  signal: RouteUpdateSignal;
+  utils?: Partial<RouterUtils>;
 }
 
 export type RouteUpdateSignal = [

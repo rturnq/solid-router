@@ -1,9 +1,4 @@
-export {
-  createRouter,
-  createRoute,
-  useRoute,
-  useRouter
-} from './routing';
+export { createRouter, createRoute, useRoute, useRouter } from './routing';
 export * from './components';
 export * from './integration';
 export * from './utils';
