@@ -1,6 +1,6 @@
 {
   "name": "@rturnq/solid-router",
-  "version": "0.2.3",
+  "version": "0.2.4-local",
   "description": "A router for solid-js",
   "author": "Ryan Turnquist",
   "license": "MIT",
@@ -9,10 +9,17 @@
     "type": "git",
     "url": "https://github.com/rturnq/solid-router"
   },
-  "main": "dist/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "solid": "./dist/index.js",
+      "default": "./dist/build/index.js"
+    }
+  },
+  "main": "dist/build/index.cjs.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "rollup -c&&tsc",
     "prebuild": "rimraf dist",
     "test": "jest && npm run test:types",
     "test:watch": "jest --watch",

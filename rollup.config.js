@@ -1,7 +1,6 @@
 import resolve from '@rollup/plugin-node-resolve';
 import babel from "@rollup/plugin-babel";
 import filesize from 'rollup-plugin-filesize';
-import pkg from './package.json';
 
 export default {
   plugins: [
@@ -19,7 +18,7 @@ export default {
   input: 'src/index.ts',
   external: ['solid-js', 'solid-js/web', 'history', 'regexparam'],
   output: [
-    { file: pkg.main, format: 'cjs' },
-    { file: pkg.module, format: 'es' }
+    { file: 'dist/build/index.cjs.js', format: 'cjs' },
+    { file: 'dist/build/index.js', format: 'es' }
   ]
 };
