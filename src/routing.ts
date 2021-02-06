@@ -18,7 +18,8 @@ import type {
   RouteUpdateMode,
   RouterUtils,
   RouteMatch,
-  RouterIntegration
+  RouterIntegration,
+  RedirectOptions
 } from './types';
 
 const MAX_REDIRECTS = 100;
@@ -31,7 +32,15 @@ interface Referrer {
 export const RouterContext = createContext<RouterState>();
 export const RouteContext = createContext<RouteState>();
 
-export const useRouter = () => useContext(RouterContext);
+export const useRouter = () => {
+  const router = useContext(RouterContext);
+  if (!router) {
+    throw new Error(
+      'No router context defined - ensure your application is wrapped with a Router component'
+    );
+  }
+  return router;
+};
 export const useRoute = () => useContext(RouteContext) || useRouter().base;
 
 export const defaultUtils = {
@@ -74,7 +83,10 @@ export function createRouter(
     setSource({ value: path, mode: 'init' });
   }
 
-  const route = createRouteState(utils, path, path, false, () => [path, {}]);
+  const baseRoute = createRouteState(utils, path, path, false, () => [
+    path,
+    {}
+  ]);
   const referrers: Referrer[] = [];
   const [isRouting, start] = useTransition();
   const [reference, setReference] = createSignal(source().value, true);
@@ -87,7 +99,21 @@ export function createRouter(
     }
   });
 
-  function redirect(mode: RouteUpdateMode, to: string) {
+  function redirect(
+    mode: RouteUpdateMode,
+    to: string,
+    options: RedirectOptions = {
+      resolve: false
+    }
+  ) {
+    const currentRoute = (useContext(RouteContext) || baseRoute);
+    const resolvedTo = options.resolve
+      ? currentRoute.resolvePath(to)
+      : utils.resolvePath('', to);
+    if (resolvedTo === undefined) {
+      throw new Error(`Path '${path}' is not a routable path`);
+    }
+
     const redirectCount = referrers.push({
       ref: untrack(reference),
       mode
@@ -97,7 +123,7 @@ export function createRouter(
       throw new Error('Too many redirects');
     }
 
-    start(() => setReference(to));
+    start(() => setReference(resolvedTo));
   }
 
   function handleRouteEnd(nextRef: string) {
@@ -122,18 +148,18 @@ export function createRouter(
   });
 
   return {
-    base: route,
+    base: baseRoute,
     location,
     query: createMapMemo(() =>
       location.queryString ? utils.parseQuery(location.queryString) : {}
     ),
     isRouting,
     utils,
-    push(to) {
-      redirect('push', to);
+    push(to, options) {
+      redirect('push', to, options);
     },
-    replace(to) {
-      redirect('replace', to);
+    replace(to, options) {
+      redirect('replace', to, options);
     }
   };
 }

@@ -5,9 +5,9 @@ import {
   createMemo,
   splitProps,
   untrack,
+  mergeProps,
   JSX
 } from 'solid-js';
-import { assignProps, isServer } from 'solid-js/web';
 import {
   useRouter,
   createRouter,
@@ -61,7 +61,7 @@ function LinkBase(props: LinkBaseProps) {
       !(evt.metaKey || evt.altKey || evt.ctrlKey || evt.shiftKey)
     ) {
       evt.preventDefault();
-      router.push(props.to);
+      router.push(props.to, { resolve: false });
     }
   }
 
@@ -74,14 +74,16 @@ function LinkBase(props: LinkBaseProps) {
 
 export interface LinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string;
+  noResolve?: boolean;
 }
 
 export function Link(props: LinkProps) {
   const route = useRoute();
-  const to = createMemo(() => route.resolvePath(props.href));
+  const to = createMemo(() =>
+    props.noResolve ? props.href : route.resolvePath(props.href)
+  );
 
-  // TODO: remove `any`, requires ref type fix
-  return <LinkBase {...(props as any)} to={to()} />;
+  return <LinkBase {...props} to={to()} />;
 }
 
 export interface NavLinkProps extends LinkProps {
@@ -90,11 +92,13 @@ export interface NavLinkProps extends LinkProps {
 }
 
 export function NavLink(props: NavLinkProps) {
-  props = assignProps({}, { activeClass: 'is-active' }, props);
+  props = mergeProps({ activeClass: 'is-active' }, props);
   const [, rest] = splitProps(props, ['activeClass', 'end']);
   const router = useRouter();
   const route = useRoute();
-  const to = createMemo(() => route.resolvePath(props.href));
+  const to = createMemo(() =>
+    props.noResolve ? props.href : route.resolvePath(props.href)
+  );
   const matcher = createMemo(() => {
     const path = to();
     return path !== undefined
@@ -111,8 +115,9 @@ export function NavLink(props: NavLinkProps) {
   );
 
   return (
-    <Link
-      {...(rest as any)} // TODO: remove `any`, requires ref type fix
+    <LinkBase
+      {...rest}
+      to={to()}
       classList={{ [props.activeClass!]: isActive() }}
       aria-current={isActive() ? 'page' : undefined}
     />
@@ -121,17 +126,14 @@ export function NavLink(props: NavLinkProps) {
 
 export interface RedirectProps {
   href: ((router: RouterState) => string) | string;
+  noResolve?: boolean;
 }
 
 export function Redirect(props: RedirectProps) {
   const router = useRouter();
   const href = props.href;
   const path = typeof href === 'function' ? href(router) : href;
-  const to = router.base.resolvePath(path);
-  if (to === undefined) {
-    throw new Error(`${to} is not a relative path`);
-  }
-  router.replace(to);
+  router.replace(path, { resolve: !props.noResolve });
   return null;
 }
 
@@ -156,21 +158,10 @@ function renderChildren<T extends any[]>(
   props: { children: ((...args: [...T]) => JSX.Element) | JSX.Element },
   args: [...T]
 ) {
-  if (isServer) {
-    const children = props.children;
-    if (typeof children === 'function' && children.length) {
-      return children(...args);
-    }
-    return children;
-  } else {
-    const childDesc = Object.getOwnPropertyDescriptor(props, 'children')!.value;
-    if (typeof childDesc === 'function' && childDesc.length) {
-      return untrack(() =>
-        (props.children as (...args: any[]) => JSX.Element)(...args)
-      );
-    }
-    return props.children;
-  }
+  const children = props.children;
+  return typeof children === 'function' && children.length
+    ? untrack(() => children(...args))
+    : children;
 }
 
 export function Route(props: RouteProps) {

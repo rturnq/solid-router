@@ -52,12 +52,16 @@ export type RouteRenderFunction = (
   router: RouterState
 ) => JSX.Element;
 
+export interface RedirectOptions {
+  resolve: boolean
+}
+
 export interface RouterState {
   base: RouteState;
   location: RouterLocation;
   query: Record<string, string>;
   isRouting: () => boolean;
   utils: RouterUtils;
-  push(to: string): void;
-  replace(to: string): void;
+  push(to: string, options?: RedirectOptions): void;
+  replace(to: string, options?: RedirectOptions): void;
 }
