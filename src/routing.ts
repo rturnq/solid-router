@@ -229,7 +229,7 @@ function createMapMemo<T>(fn: () => Record<string, T>): Record<string, T> {
     {},
     {
       get(_, key) {
-        return untrack(() => state.map)[key as any];
+        return state.map[key as any];
       },
       ownKeys() {
         return Reflect.ownKeys(map());
