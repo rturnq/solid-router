@@ -89,7 +89,7 @@ export function createRouter(
   ]);
   const referrers: Referrer[] = [];
   const [isRouting, start] = useTransition();
-  const [reference, setReference] = createSignal(source().value, true);
+  const [reference, setReference] = createSignal(source().value);
   const [location] = createState<RouterLocation>({
     get path() {
       return reference().split('?', 1)[0];
@@ -106,7 +106,7 @@ export function createRouter(
       resolve: false
     }
   ) {
-    const currentRoute = (useContext(RouteContext) || baseRoute);
+    const currentRoute = useContext(RouteContext) || baseRoute;
     const resolvedTo = options.resolve
       ? currentRoute.resolvePath(to)
       : utils.resolvePath('', to);
@@ -189,14 +189,10 @@ export function createRouteState(
   end: boolean,
   matchSignal: () => RouteMatch | null
 ): RouteState {
-  const match = createMemo(
-    () => {
-      const routeMatch = matchSignal();
-      return routeMatch ? routeMatch[0] : undefined;
-    },
-    undefined,
-    true
-  );
+  const match = createMemo(() => {
+    const routeMatch = matchSignal();
+    return routeMatch ? routeMatch[0] : undefined;
+  });
   return {
     path,
     end,
@@ -215,7 +211,7 @@ export function createRouteState(
 }
 
 function createMapMemo<T>(fn: () => Record<string, T>): Record<string, T> {
-  const map = createMemo(fn, undefined, true);
+  const map = createMemo(fn);
   const data = createMemo(map, undefined, (a, b) => {
     reconcile(b, { key: null })(a as any);
     return true;

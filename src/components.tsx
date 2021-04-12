@@ -24,22 +24,6 @@ import type {
   RouterIntegration
 } from './types';
 
-type TargetEvent<T, E extends Event> = E & {
-  currentTarget: T;
-  target: T;
-};
-
-function callEventHandlerUnion<T, E extends Event>(
-  handler: JSX.EventHandlerUnion<T, E> | undefined,
-  evt: TargetEvent<T, E>
-) {
-  if (typeof handler === 'function') {
-    handler(evt);
-  } else if (handler) {
-    handler[0](handler[1], evt);
-  }
-}
-
 interface LinkBaseProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
   to: string | undefined;
 }
@@ -51,19 +35,26 @@ function LinkBase(props: LinkBaseProps) {
     props.to !== undefined ? router.utils.renderPath(props.to) : props.href
   );
 
-  function handleClick(evt: TargetEvent<HTMLAnchorElement, MouseEvent>) {
-    callEventHandlerUnion(props.onClick, evt);
+  const handleClick: JSX.EventHandler<HTMLAnchorElement, MouseEvent> = (
+    evt
+  ) => {
+    const { onClick, to, target } = props;
+    if (typeof onClick === 'function') {
+      onClick(evt);
+    } else if (onClick) {
+      onClick[0](onClick[1], evt);
+    }
     if (
-      props.to !== undefined &&
+      to !== undefined &&
       !evt.defaultPrevented &&
       evt.button === 0 &&
-      (!props.target || props.target === '_self') &&
+      (!target || target === '_self') &&
       !(evt.metaKey || evt.altKey || evt.ctrlKey || evt.shiftKey)
     ) {
       evt.preventDefault();
-      router.push(props.to, { resolve: false });
+      router.push(to, { resolve: false });
     }
-  }
+  };
 
   return (
     <a {...rest} href={href()} onClick={handleClick}>
@@ -105,14 +96,10 @@ export function NavLink(props: NavLinkProps) {
       ? router.utils.createMatcher(path, { end: !!props.end })
       : undefined;
   });
-  const isActive = createMemo(
-    () => {
-      const m = matcher();
-      return m && !!m(router.location.path);
-    },
-    false,
-    true
-  );
+  const isActive = createMemo(() => {
+    const m = matcher();
+    return m && !!m(router.location.path);
+  });
 
   return (
     <LinkBase
