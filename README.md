@@ -1,6 +1,6 @@
 # solid-router
 
-A router for [solid-js](https://github.com/ryansolid/solid)
+A router for [Solidjs](https://github.com/solidjs/solid)
 
 ## Getting Started
 
@@ -306,6 +306,69 @@ createIntegration(
 )
 ```
 
+## Server-Side Rendering
+
+A goal of this router is to supports server-side rendering as isomorphically as possible. To that end generally the only thing that you have to change is the integration passed to the `<Router>` component.
+
+A simple setup using Express
+
+```tsx
+// App.tsx
+import { Component, createSignal } from 'solid-js';
+import { isServer } from 'solid-js/web';
+import { Router, pathIntegration } from '@rturnq/solid-router';
+
+function App(props: { url?: String }) {
+  return (
+    // This is the important bit: use `isServer` from Solid to pass in a simple signal as an
+    // integration when running on the server.
+    <Router integration={isServer ? createSignal({ value: props.url }) : pathIntegration()}>
+      <Root />
+    </Router>
+  );
+}
+```
+
+```tsx
+// entry-client.tsx
+import { hydrate } from 'solid-js/web';
+import App from './App';
+
+hydrate(() => <App />, document.getElementById('root')!);
+```
+
+```tsx
+// entry-server.tsx
+import { renderToNodeStream } from 'solid-js/web';
+import App from './App';
+import fetch from 'node-fetch';
+
+globalThis.fetch = fetch;
+
+export function render(url: string) {
+  return renderToNodeStream(() => <App url={url} />);
+}
+```
+
+```js
+// server.ts
+import express from 'express';
+import { render } from './entry-server.tsx';
+
+const app = express();
+
+app.get('*', (req, res) => {
+  // Pass the url from the request to your app
+  const { stream, script } = render(req.originalUrl);
+
+  // ...stream the response
+});
+```
+
+Please note that handling redirects on the server is not supported currently.
+  
+
+
 ## Don't Like How Something Works? 
 
 The router tries to provide sensible defaults but also allows a few places where you can override the behavior.
@@ -356,7 +419,53 @@ To override these utils, provide your own to the \<Router> component utils prope
 <Router utils={{ ...myUtils }}>
 ```
 
+
+## Notes and Gotchas
+
+### Vite
+[Vite](https://vitejs.dev/) is an awesome project and you should at least check it out if you're not using it already. There are a couple issues you are likely to run into using this router with Vite however, but they have simple workarounds.
+
+### Dependency Pre-Bundling
+The first issue you'll see the following error at runtime
+> Uncaught ReferenceError: React is not defined
+
+Vite uses esbuild to [pre-bundle dependencies](https://vitejs.dev/guide/dep-pre-bundling.html) (think node_modules) as a performance enhancement. The problem is the JSX components this package ships. When esbuild sees JSX, by default it assumes React and replaces eveything with `React.createComponent` calls which of course fail at runtime.
+
+As Vite's hueristic improves this will become unneccessary, but for now the workaround is to manually exclude `@rturnq/solid-router` from the pre-bundled dependencies in your Vite config:
+
+```js
+// vite.config.js
+export default defineConfig({
+  //...
+  optimizeDeps: {
+    exclude: ['@rturnq/solid-router'],
+  }
+});
+```
+
+### SSR Externals
+The second issue is less common and you'll only see it when performing SSR and using a Windows machine
+> Error [ERR_REQUIRE_ESM]: Must use import to load ES Module
+
+This is caused by another [optimization](https://vitejs.dev/guide/ssr.html#ssr-externals) where Vite attempts to use CommonJS builds shipped by a package instead of converting ESM to run in Node. A [bug](https://github.com/vitejs/vite/issues/2393) prevents this from working correctly on Windows so you'll need to manually exclude `@rturnq/solid-router` from the SSR externals in your Vite config:
+
+```js
+// vite.config.js
+export default defineConfig({
+  //...
+  ssr: {
+    noExternal: ['@rturnq/solid-router']
+  },
+});
+```
+
+## Questions
+
+Feel free to file an issue if you find a bug, something isn't working correctly or you have good ideas. Additionally, if you have usage questions, want help troubleshooting an issue or otherwise want to discuss the router, I'm usually around in the [Solid Discord](https://discord.com/invite/solidjs) as @rturnq.
+
 ## TODO
 
  - Write more tests
- - Handle SSR builds once that's nailed down
+ - Improve SSR
+ - Examples
+ - Better Documentation
