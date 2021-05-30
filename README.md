@@ -410,7 +410,7 @@ interface RouterUtils {
 
   // Determines how a path is rendered in the underlying anchor's href attribute for <Link> or
   // <NavLink> components.
-  renderPath(path: stirng): string
+  renderPath(path: string): string
 }
 ```
 
