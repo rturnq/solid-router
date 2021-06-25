@@ -31,7 +31,7 @@ export function createIntegration(
   utils?: Partial<RouterUtils>
 ): RouterIntegration {
   const signal = intercept<RouteUpdate>(
-    createSignal({ value: get() }, (a, b) => a.value === b.value),
+    createSignal({ value: get() }, { equals: (a, b) => a.value === b.value }),
     undefined,
     (next) => {
       const { value, mode } = next;

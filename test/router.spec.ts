@@ -1,4 +1,5 @@
-import { createRoot, createSignal, unwrap } from 'solid-js';
+import { createRoot, createSignal } from 'solid-js';
+import { unwrap } from 'solid-js/store'
 import { createRouter, defaultUtils } from '../src/routing';
 import type { RouteUpdate } from '../src/types';
 import { createAsyncRoot, createCounter, waitFor } from './helpers';

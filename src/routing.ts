@@ -1,14 +1,13 @@
 import {
   createContext,
-  createState,
   useContext,
   createMemo,
   createSignal,
   createRenderEffect,
   useTransition,
-  untrack,
-  reconcile
+  untrack
 } from 'solid-js';
+import { createStore, reconcile } from 'solid-js/store';
 import { createMatcher, parseQuery, resolvePath, renderPath } from './utils';
 import type {
   RouteUpdateSignal,
@@ -90,7 +89,7 @@ export function createRouter(
   const referrers: Referrer[] = [];
   const [isRouting, start] = useTransition();
   const [reference, setReference] = createSignal(source().value);
-  const [location] = createState<RouterLocation>({
+  const [location] = createStore<RouterLocation>({
     get path() {
       return reference().split('?', 1)[0];
     },
@@ -212,11 +211,13 @@ export function createRouteState(
 
 function createMapMemo<T>(fn: () => Record<string, T>): Record<string, T> {
   const map = createMemo(fn);
-  const data = createMemo(map, undefined, (a, b) => {
-    reconcile(b, { key: null })(a as any);
-    return true;
+  const data = createMemo(map, undefined, {
+    equals: (a, b) => {
+      reconcile(b, { key: null })(a as any);
+      return true;
+    }
   });
-  const [state] = createState({
+  const [state] = createStore({
     get map() {
       return data();
     }
