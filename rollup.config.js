@@ -15,7 +15,7 @@ export default {
     }),
     filesize()
   ],
-  input: 'src/index.ts',
+  input: 'src/index.tsx',
   external: ['solid-js', 'solid-js/web', 'history', 'regexparam'],
   output: [
     { file: 'dist/build/index.cjs.js', format: 'cjs' },

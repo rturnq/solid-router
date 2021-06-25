@@ -12,7 +12,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "solid": "./dist/index.js",
+      "solid": "./dist/index.jsx",
       "default": "./dist/build/index.js"
     }
   },
