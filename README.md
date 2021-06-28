@@ -423,31 +423,14 @@ To override these utils, provide your own to the \<Router> component utils prope
 ## Notes and Gotchas
 
 ### Vite
-[Vite](https://vitejs.dev/) is an awesome project and you should at least check it out if you're not using it already. There are a couple issues you are likely to run into using this router with Vite however, but they have simple workarounds.
+[Vite](https://vitejs.dev/) is an awesome project and you should at least check it out if you're not using it already. The following are known issues and their workarounds:
 
-### Dependency Pre-Bundling
-The first issue you'll see the following error at runtime
-> Uncaught ReferenceError: React is not defined
-
-Vite uses esbuild to [pre-bundle dependencies](https://vitejs.dev/guide/dep-pre-bundling.html) (think node_modules) as a performance enhancement. The problem is the JSX components this package ships. When esbuild sees JSX, by default it assumes React and replaces eveything with `React.createComponent` calls which of course fail at runtime.
-
-As Vite's hueristic improves this will become unneccessary, but for now the workaround is to manually exclude `@rturnq/solid-router` from the pre-bundled dependencies in your Vite config:
-
-```js
-// vite.config.js
-export default defineConfig({
-  //...
-  optimizeDeps: {
-    exclude: ['@rturnq/solid-router'],
-  }
-});
-```
 
 ### SSR Externals
-The second issue is less common and you'll only see it when performing SSR and using a Windows machine
+When using the router with SSR, you may encounter the following error.
 > Error [ERR_REQUIRE_ESM]: Must use import to load ES Module
 
-This is caused by another [optimization](https://vitejs.dev/guide/ssr.html#ssr-externals) where Vite attempts to use CommonJS builds shipped by a package instead of converting ESM to run in Node. A [bug](https://github.com/vitejs/vite/issues/2393) prevents this from working correctly on Windows so you'll need to manually exclude `@rturnq/solid-router` from the SSR externals in your Vite config:
+This is caused by an [optimization](https://vitejs.dev/guide/ssr.html#ssr-externals) where Vite attempts to use CommonJS builds shipped by a package instead of converting ESM to run in Node. A [bug](https://github.com/vitejs/vite/issues/2393) prevents this from working correctly on Windows so you'll need to manually exclude `@rturnq/solid-router` from the SSR externals in your Vite config:
 
 ```js
 // vite.config.js
