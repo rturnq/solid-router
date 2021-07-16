@@ -8,7 +8,13 @@ import {
   untrack
 } from 'solid-js';
 import { createStore, reconcile } from 'solid-js/store';
-import { createMatcher, parseQuery, resolvePath, renderPath } from './utils';
+import {
+  createMatcher,
+  parseQuery,
+  resolvePath,
+  renderPath,
+  warnOnce
+} from './utils';
 import type {
   RouteUpdateSignal,
   RouteState,
@@ -173,8 +179,12 @@ export function createRoute(
   if (path === undefined) {
     throw new Error(`${pattern} is not a valid path`);
   }
-  if (parent.end && !end) {
-    throw new Error(`Route '${path}' parent is a terminal route`);
+  if (process.env.NODE_ENV !== 'production') {
+    warnOnce(
+      `terminal-route-${path}`,
+      parent.end && !end,
+      `Route '${path}' is being defined under parent route '${parent.path}' which was marked with 'end'. This route will not match`
+    );
   }
   const matcher = router.utils.createMatcher(path, { end });
   const match = createMemo(() => matcher(router.location.path));

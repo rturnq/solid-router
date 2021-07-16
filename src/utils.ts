@@ -62,3 +62,23 @@ export function parseQuery(queryString: string): Record<string, string> {
 export function renderPath(path: string): string {
   return path;
 }
+
+export function warn(condition: boolean, message: string): void {
+  if (condition) {
+    if (typeof console !== 'undefined') {
+      console.warn(message);
+    } else {
+      try {
+        throw new Error(message);
+      } catch (e) {}
+    }
+  }
+}
+
+const warned: Record<string, boolean> = {};
+export function warnOnce(key: string, condition: boolean, message: string) {
+  if (condition && !warned[key]) {
+    warned[key] = true;
+    warn(false, message);
+  }
+}
