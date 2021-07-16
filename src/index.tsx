@@ -12,5 +12,6 @@ export type {
   RouteUpdateSignal,
   RouterLocation,
   RouterState,
-  RouterUtils
+  RouterUtils,
+  RedirectOptions
 } from './types';
