@@ -2,6 +2,11 @@
 
 A router for [Solidjs](https://github.com/solidjs/solid)
 
+## Notice
+
+I'm not planning on maintaining this package any more - go use [solid-app-router](https://github.com/solidjs/solid-app-router) instead. I have been collaborating on it and from the 0.1.0 version, it has feature parity with this router plus so many features and capabilities.
+
+---
 ## Getting Started
 
 ### Installation
